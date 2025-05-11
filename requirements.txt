@@ -1,0 +1,32 @@
+# Core dependencies
+python-dotenv==1.0.1      # For loading environment variables
+voyageai==0.2.4          # For generating embeddings
+pinecone-client==3.0.2   # For vector database operations
+braintrust==0.0.202      # For evaluation and monitoring
+braintrust_core==0.0.58  # Core Braintrust functionality
+
+# Protocol and API dependencies
+protobuf==4.25.3         # Required for Pinecone gRPC client
+googleapis-common-protos==1.63.0  # Provides google protobufs
+google-api-core==2.18.0  # Google API core utilities
+google-auth==2.40.1      # Google authentication
+
+# HTTP and networking
+aiohttp==3.11.18         # Async HTTP client/server
+requests==2.32.3         # HTTP for humans
+urllib3==2.4.0           # HTTP client
+aiohappyeyeballs==2.6.1  # Happy Eyeballs algorithm implementation
+aiolimiter==1.2.1        # Rate limiting for async operations
+
+# Type hints and data structures
+pydantic==2.11.4         # Data validation using Python type annotations
+typing-extensions==4.13.2 # For enhanced type hints
+dataclasses==0.6         # For Section dataclass
+annotated-types==0.7.0   # Support for type annotations
+
+# Utilities and helpers
+python-json-logger==2.0.7 # For structured logging
+python-slugify==8.0.4    # For generating clean slugs
+tqdm==4.67.1             # Progress bar
+numpy==2.2.5             # Numerical computing
+tenacity==9.1.2          # Retry library 
