@@ -1,8 +1,6 @@
 import os
-import braintrust
-from braintrust import Span, Attachment, traced, wrap_openai, init_logger
+from braintrust import traced, wrap_openai, init_logger, current_span
 from dotenv import load_dotenv
-from typing import List, Dict, Any
 import openai
 import json
 from tools.retrieval_tool import handler as get_documents
@@ -22,9 +20,10 @@ if missing_vars:
     print("Please ensure these are set in your .env.local file")
     sys.exit(1)
 
+# Initialize Braintrust logger
 logger = init_logger(project="rag-braintrust-bot")
 
-# Initialize wrapped OpenAI client
+# Initialize wrapped OpenAI client & use OpenAI API Key stored in Braintrust
 client = wrap_openai(
     openai.OpenAI(
         base_url="https://braintrustproxy.com/v1",
@@ -73,20 +72,44 @@ When answering:
 5. Focus on practical implementation details
 """
 
-def handle_tool_calls(tool_calls):
+def handle_tool_calls(tool_calls, parent_span):
     """Handle tool calls from OpenAI."""
-    results = []
     for tool_call in tool_calls:
         if tool_call.function.name == "get_documents":
+            # Parse the query from the function arguments
             args = json.loads(tool_call.function.arguments)
-            documents = get_documents(args["query"])
-            results.append({
-                "tool_call_id": tool_call.id,
-                "role": "tool",
-                "name": "get_documents",
-                "content": json.dumps(documents)
-            })
-    return results
+            query = args.get("query", "")
+            
+            # Create a span for document retrieval
+            with logger.start_span(name="get_documents", type="tool", parent=parent_span) as span:
+                # Call the RAG tool
+                rag_response = get_documents(query)
+                
+                # Log the input query & document ids
+                span.log(
+                    inputs={"query": query},
+                    metadata={"tool_name": "get_documents", "document_ids": [doc['id'] for doc in rag_response["documents"]]}
+                )
+                
+                # Log each document with its metadata
+                for doc in rag_response["documents"]:
+                    with logger.start_span(name=f"document_{doc['id']}", type="tool", parent=parent_span) as span:
+                        span.log(
+                            inputs={"query": query},
+                            output={"document": doc["content"]},
+                            metadata={
+                                "tool_name": "get_documents",
+                                "document_id": doc["id"],
+                                "document_title": doc["title"],
+                                "similarity_score": doc["score"],
+                                "document_tags": doc["tags"]
+                            }
+                        )
+                
+                return {
+                    "results": rag_response,
+                    "tool_call_id": tool_call.id
+                }
 
 @traced
 def process_query(query: str):
@@ -113,14 +136,22 @@ def process_query(query: str):
             tools=rag_tool,
             tool_choice="auto"
         )
+
+        # export the span slug
+        parent_span = current_span().export()
         
         # Handle tool calls and get documents
-        tool_results = handle_tool_calls(response.choices[0].message.tool_calls)
+        tool_response = handle_tool_calls(response.choices[0].message.tool_calls, parent_span)
         
         # Add tool results and get final answer
         messages.extend([
             response.choices[0].message,
-            *tool_results
+            {
+                "role": "tool",
+                "name": "get_documents",
+                "content": json.dumps(tool_response["results"]),
+                "tool_call_id": tool_response["tool_call_id"]
+            }
         ])
         
         final_response = client.chat.completions.create(

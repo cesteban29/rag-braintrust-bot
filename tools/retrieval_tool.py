@@ -50,9 +50,15 @@ class Document(BaseModel):
     Attributes:
         title (str): The title/heading of the document section
         content (str): The actual content/text of the document section
+        id (str): The unique identifier of the document
+        score (float): The similarity score with the query
+        tags (List[str]): Any tags associated with the document
     """
     title: str
     content: str
+    id: str
+    score: float
+    tags: List[str] = []
 
 class DocumentOutput(BaseModel):
     """
@@ -108,9 +114,14 @@ def handler(query: str):
         include_metadata=True
     )
     
-    # Format the matches to include only title and content
-    matches = [{'title': match['metadata']['title'], 'content': match['metadata']['content']} 
-              for match in response['matches']]
+    # Format the matches to include title, content, and additional metadata
+    matches = [{
+        'title': match['metadata']['title'],
+        'content': match['metadata']['content'],
+        'id': match['id'],
+        'score': match['score'],
+        'tags': match['metadata'].get('tags', [])
+    } for match in response['matches']]
 
     return {'documents': matches}
 
