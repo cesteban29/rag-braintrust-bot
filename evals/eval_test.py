@@ -7,8 +7,14 @@ import sys
 # Add the src directory to the path so we can import from rag_braintrust_bot
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from rag_braintrust_bot.rag_demo import process_query
+# Suppress httpx logs that come from OpenAI client calls to Braintrust proxy
+import logging
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
+from rag_braintrust_bot.rag_demo import process_query, client, rag_tool, SYSTEM_PROMPT
+from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
 from braintrust import current_span
+import json
 
 # Load environment variables
 load_dotenv()
@@ -35,10 +41,7 @@ def task(input_data, hooks):
         query = str(input_data)
     
     try:
-        # Import the RAG components directly to avoid span conflicts
-        from rag_braintrust_bot.rag_demo import client, rag_tool, SYSTEM_PROMPT
-        from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
-        import json
+        # RAG components are now imported at module level for better performance
         
         # Create the conversation without complex span handling
         messages = [
@@ -54,7 +57,7 @@ def task(input_data, hooks):
         
         # Get initial completion with tool calls
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=messages,
             tools=rag_tool,
             tool_choice="auto"
@@ -89,7 +92,7 @@ def task(input_data, hooks):
             messages.extend([response.choices[0].message] + tool_responses)
             
             final_response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=messages,
                 max_tokens=1000
             )

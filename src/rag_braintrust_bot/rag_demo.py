@@ -115,9 +115,6 @@ Return only the questions, one per line, without numbering or bullet points."""
             "What is the process for human review in Braintrust?"
         ]
 
-# Generate dynamic test queries
-test_queries = generate_test_queries()
-
 # Define the RAG tool for OpenAI
 rag_tool = [
     {
@@ -247,6 +244,8 @@ def process_query(query: str):
 
 def main():
     """Main function to process all test queries."""
+    # Generate dynamic test queries only when running as main script
+    test_queries = generate_test_queries()
     print(f"Running RAG demo with {len(test_queries)} queries...")
     
     for i, query in enumerate(test_queries, 1):

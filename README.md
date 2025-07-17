@@ -102,7 +102,7 @@ Set up the document retrieval tool:
 python src/rag_braintrust_bot/retrieval/retrieval_tool.py
 ```
 
-### 3. Run RAG System Demo
+### 3. Run RAG System Demo - these will appear in Braintrust Logs
 
 Test the RAG system with sample queries:
 
@@ -110,7 +110,7 @@ Test the RAG system with sample queries:
 python src/rag_braintrust_bot/rag_demo.py
 ```
 
-### 4. Run Evaluations
+### 4. Run Offline Evaluations
 
 Evaluate the RAG system performance using Braintrust:
 
