@@ -1,0 +1,122 @@
+[
+    {
+        "query": "How do I set up logging in Braintrust?",
+        "expected": "Should mention init_logger, project names, span logging, and provide code examples for initializing the logger and logging events."
+    },
+    {
+        "query": "What are the main features of the Braintrust playground?",
+        "expected": "Should describe the playground as a tool for testing prompts, mention features like prompt versioning, testing different models, and interactive experimentation."
+    },
+    {
+        "query": "How can I evaluate a chat assistant using Braintrust?",
+        "expected": "Should mention evaluation datasets, scoring functions, the Eval function, and provide examples of how to set up evaluations with tasks and scorers."
+    },
+    {
+        "query": "Explain how to use assertions in Braintrust",
+        "expected": "Should explain the assertion system, how to write custom assertions, different types of assertions available, and provide code examples."
+    },
+    {
+        "query": "What is the process for human review in Braintrust?",
+        "expected": "Should describe the human review workflow, how to set up review tasks, reviewer interfaces, and integration with evaluation pipelines."
+    },
+    {
+        "query": "How do I create and manage datasets in Braintrust?",
+        "expected": "Should explain dataset creation, management, versioning, and how to use init_dataset function with examples."
+    },
+    {
+        "query": "What is tracing in Braintrust and how do I implement it?",
+        "expected": "Should explain distributed tracing, span creation, the @traced decorator, and how to trace function calls with examples."
+    },
+    {
+        "query": "How do I use the Braintrust API for programmatic access?",
+        "expected": "Should mention REST API endpoints, authentication, SDK usage, and provide examples of API calls for common operations."
+    },
+    {
+        "query": "What are prompts in Braintrust and how do I manage them?",
+        "expected": "Should explain prompt management, versioning, templates, and how to create and use prompts programmatically."
+    },
+    {
+        "query": "How do I implement access control in Braintrust?",
+        "expected": "Should describe user roles, permissions, team management, and security features for controlling access to projects and data."
+    },
+    {
+        "query": "What is the difference between online and offline evaluation in Braintrust?",
+        "expected": "Should explain online evaluation (real-time), offline evaluation (batch), and when to use each approach with examples."
+    },
+    {
+        "query": "How do I integrate Braintrust with OpenAI models?",
+        "expected": "Should mention wrap_openai function, API key management, and provide examples of using wrapped OpenAI clients."
+    },
+    {
+        "query": "What scoring functions are available in Braintrust?",
+        "expected": "Should list built-in scorers, explain how to create custom scoring functions, and provide examples of evaluation metrics."
+    },
+    {
+        "query": "How do I handle model comparison in Braintrust?",
+        "expected": "Should explain how to compare different models, A/B testing, evaluation metrics, and provide examples of model comparison workflows."
+    },
+    {
+        "query": "What is the proxy feature in Braintrust?",
+        "expected": "Should explain the proxy service, how it works with different LLM providers, logging capabilities, and configuration options."
+    },
+    {
+        "query": "How do I implement text-to-SQL evaluation using Braintrust?",
+        "expected": "Should mention SQL evaluation techniques, database schema handling, query correctness scoring, and provide examples."
+    },
+    {
+        "query": "What are the best practices for prompt engineering in Braintrust?",
+        "expected": "Should cover prompt optimization, testing strategies, version control, and evaluation of prompt performance."
+    },
+    {
+        "query": "How do I set up continuous evaluation pipelines in Braintrust?",
+        "expected": "Should explain automation, CI/CD integration, scheduled evaluations, and monitoring of model performance over time."
+    },
+    {
+        "query": "What tools does Braintrust provide for debugging AI applications?",
+        "expected": "Should mention tracing, logging, span analysis, error tracking, and debugging workflows for AI applications."
+    },
+    {
+        "query": "How do I handle large-scale evaluation with Braintrust?",
+        "expected": "Should discuss performance optimization, batch processing, parallel evaluation, and scalability considerations."
+    },
+    {
+        "query": "What is the receipt extraction example in Braintrust?",
+        "expected": "Should describe the receipt extraction use case, OCR integration, structured data extraction, and evaluation methods."
+    },
+    {
+        "query": "How do I implement custom evaluation metrics in Braintrust?",
+        "expected": "Should explain creating custom scorers, evaluation functions, metrics calculation, and integration with evaluation pipelines."
+    },
+    {
+        "query": "What is the GitHub issues example and how does it work?",
+        "expected": "Should describe the GitHub issues use case, API integration, issue classification, and evaluation setup."
+    },
+    {
+        "query": "How do I use Braintrust for news article classification?",
+        "expected": "Should explain text classification, category assignment, evaluation metrics, and provide examples of classification workflows."
+    },
+    {
+        "query": "What are the key components of a Braintrust evaluation setup?",
+        "expected": "Should mention task functions, datasets, scoring functions, the Eval class, and how they work together."
+    },
+    {
+        "query": "How do I monitor and analyze evaluation results in Braintrust?",
+        "expected": "Should describe result visualization, metrics analysis, performance tracking, and dashboard features."
+    },
+    {
+        "query": "What is the HTML generator example in Braintrust?",
+        "expected": "Should explain HTML generation use case, template evaluation, output validation, and quality assessment."
+    },
+    {
+        "query": "How do I implement provider benchmarking in Braintrust?",
+        "expected": "Should describe comparing different LLM providers, performance metrics, cost analysis, and benchmarking workflows."
+    },
+    {
+        "query": "What security features does Braintrust provide?",
+        "expected": "Should mention data encryption, access controls, audit logging, and compliance features."
+    },
+    {
+        "query": "How do I get started with Braintrust for the first time?",
+        "expected": "Should provide initial setup steps, account creation, first project setup, and basic usage examples."
+    }
+]

@@ -7,24 +7,10 @@ from typing import List
 from dotenv import load_dotenv
 import sys
 
-# Load environment variables from .env.local
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env.local'))
+# Load environment variables
+load_dotenv('.env.local')
 
-# Validate required environment variables
-required_env_vars = [
-    "BRAINTRUST_API_KEY",
-    "VOYAGEAI_API_KEY",
-    "PINECONE_API_KEY",
-    "INDEX_NAME"
-]
-
-missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-if missing_vars:
-    print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
-    print("Please ensure these are set in your .env.local file")
-    sys.exit(1)
-
-# Create a new Braintrust project for Life Sciences RAG
+# Create a new Braintrust project
 project = braintrust.projects.create("rag-braintrust-bot")
 
 class Args(BaseModel):
@@ -99,10 +85,10 @@ def handler(query: str):
     
     # Initialize Pinecone client and connect to the index
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-    index = pc.Index(os.getenv("INDEX_NAME"))
+    index = pc.Index("dev-rag-bot")
     
     # Use the same embedding model as specified in ingest.py
-    MODEL = os.getenv('EMBEDDING_MODEL', 'voyage-3')
+    MODEL = 'voyage-3'
 
     # Create embedding for the query
     xq = vo.embed(query, model=MODEL, input_type='query').embeddings[0]
@@ -127,10 +113,10 @@ def handler(query: str):
 
 # Create the Braintrust tool for document retrieval
 get_documents = project.tools.create(
-    name="Get Documents", 
+    name="BT Get Documents", 
     handler=handler, 
     parameters=Args, 
     returns=DocumentOutput,
-    slug='get-documents-rag',
+    slug='bt-get-documents-rag',
     if_exists='replace'
 )

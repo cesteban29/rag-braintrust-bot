@@ -3,11 +3,11 @@ from braintrust import traced, wrap_openai, init_logger, current_span
 from dotenv import load_dotenv
 import openai
 import json
-from tools.retrieval_tool import handler as get_documents
+from .tools.retrieval_tool import handler as get_documents
 import sys
 
 # Load environment variables
-load_dotenv('.env.local')
+load_dotenv('.env')
 
 # Validate required environment variables
 required_env_vars = [

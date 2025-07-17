@@ -164,7 +164,7 @@ def main():
         logging.error(f"Failed to initialize Pinecone client: {e}")
         return
 
-    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'documents')
     logging.info(f"Looking for markdown files in: {data_dir}")
     
     try:
