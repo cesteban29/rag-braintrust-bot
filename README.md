@@ -211,7 +211,7 @@ The evaluation system measures four key aspects:
 5. **Evaluation Command**: Use `export $(grep -v '^#' .env.local | xargs) && braintrust eval evals/eval_test.py` to ensure environment variables are loaded
 6. **OpenAI Compatibility**: If you encounter OpenAI version issues, the evaluation system uses the latest compatible versions
 
-### Logging
+### Document Ingest Logging
 
 - Ingestion logs are saved to `ingest.log`
 - Use `logging.info()` level for detailed processing information
