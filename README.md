@@ -7,8 +7,9 @@ A Retrieval-Augmented Generation (RAG) system built with Braintrust for evaluati
 This project creates a RAG system that:
 - Processes markdown documents and stores them as vector embeddings
 - Provides semantic search capabilities over the document collection
-- Uses Braintrust for evaluation and prompt management
-- Supports multi-turn conversations with document retrieval
+- Uses Braintrust for comprehensive evaluation and monitoring
+- Includes automated evaluation with multiple quality metrics
+- Supports interactive querying and testing
 
 ## Prerequisites
 
@@ -101,13 +102,29 @@ Set up the document retrieval tool:
 python src/rag_braintrust_bot/retrieval/retrieval_tool.py
 ```
 
-### 3. Run Evaluations
+### 3. Run RAG System Demo
 
-Create and test prompts with multi-turn conversations:
+Test the RAG system with sample queries:
 
 ```bash
-python src/rag_braintrust_bot/braintrust/rag_evaluation.py
+python src/rag_braintrust_bot/rag_demo.py
 ```
+
+### 4. Run Evaluations
+
+Evaluate the RAG system performance using Braintrust:
+
+```bash
+# Load environment variables and run evaluation
+export $(grep -v '^#' .env.local | xargs) && braintrust eval evals/eval_test.py
+```
+
+This will:
+- Process 30 test questions about Braintrust documentation
+- Evaluate document retrieval quality
+- Assess answer relevance and faithfulness
+- Check response structure and formatting
+- Generate detailed performance metrics
 
 ## Project Structure
 
@@ -124,7 +141,10 @@ rag-braintrust-bot/
 │       └── rag_demo.py               # Main demo script
 ├── data/
 │   └── documents/                    # Markdown files to be processed
-├── evals/                            # Braintrust Eval files
+├── evals/                            # Braintrust evaluation files
+│   ├── datasets/
+│   │   └── braintrust_documentation_qa.json  # Test questions dataset
+│   └── eval_test.py              # Main evaluation script
 ├── scripts/
 │   └── setup.sh                      # Automated setup script
 ├── venv/                             # Virtual environment
@@ -146,10 +166,25 @@ rag-braintrust-bot/
 - **Purpose**: Provides semantic search over the document collection
 - **Features**: Returns relevant documents with similarity scores
 
-### Braintrust Tools
-- **File**: `src/rag_braintrust_bot/braintrust/rag_evaluation.py`
-- **Purpose**: Creates multi-turn conversation prompts for testing
-- **Features**: Simulates realistic user interactions with tool calls
+### RAG System Demo
+- **File**: `src/rag_braintrust_bot/rag_demo.py`
+- **Purpose**: Interactive demonstration of the RAG system
+- **Features**: Processes sample queries, retrieves documents, generates answers
+
+### Evaluation System
+- **File**: `evals/eval_test.py`
+- **Purpose**: Comprehensive evaluation of RAG system performance
+- **Features**: Multi-metric evaluation (retrieval, relevance, faithfulness, structure)
+- **Dataset**: 30 curated questions about Braintrust documentation
+
+#### Evaluation Metrics
+
+The evaluation system measures four key aspects:
+
+1. **Document Retrieval Check**: Evaluates whether relevant documents are retrieved for each query
+2. **Answer Relevance Check**: Measures how well the generated answer addresses the input question
+3. **Answer Faithfulness Check**: Assesses whether the answer is grounded in the retrieved documents
+4. **Response Structure Check**: Validates proper formatting, code examples, and documentation structure
 
 ## Dependencies
 
@@ -173,6 +208,8 @@ rag-braintrust-bot/
 2. **Pinecone Index Not Found**: Create the index in Pinecone console before running ingestion
 3. **Python Version**: Ensure you're using Python 3.12 or higher
 4. **Virtual Environment**: Always activate the virtual environment before running scripts
+5. **Evaluation Command**: Use `export $(grep -v '^#' .env.local | xargs) && braintrust eval evals/eval_test.py` to ensure environment variables are loaded
+6. **OpenAI Compatibility**: If you encounter OpenAI version issues, the evaluation system uses the latest compatible versions
 
 ### Logging
 

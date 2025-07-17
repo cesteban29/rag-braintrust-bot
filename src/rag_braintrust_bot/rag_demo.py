@@ -3,8 +3,11 @@ from braintrust import traced, wrap_openai, init_logger, current_span
 from dotenv import load_dotenv
 import openai
 import json
-from .tools.retrieval_tool import handler as get_documents
 import sys
+import os
+# Add the src directory to Python path
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
+from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
 
 # Load environment variables
 load_dotenv('.env')
@@ -31,14 +34,89 @@ client = wrap_openai(
     )
 )
 
-# Sample queries to test the system
-test_queries = [
-    "How do I set up logging in Braintrust?",
-    "What are the main features of the Braintrust playground?",
-    "How can I evaluate a chat assistant using Braintrust?",
-    "Explain how to use assertions in Braintrust",
-    "What is the process for human review in Braintrust?"
-]
+def generate_test_queries(num_queries=5):
+    """
+    Dynamically generate test queries using OpenAI based on available documentation.
+    
+    Returns:
+        list: Generated test queries
+    """
+    print("🤖 Generating dynamic test queries...")
+    try:
+        # First, get a sample of available document topics
+        sample_docs = get_documents("Braintrust features and capabilities")
+        
+        # Extract topics from the retrieved documents
+        topics = []
+        for doc in sample_docs["documents"][:3]:  # Use top 3 docs for context
+            topics.append(f"- {doc['title']}: {doc['content'][:200]}...")
+        
+        topics_context = "\n".join(topics)
+        
+        # Generate questions using OpenAI
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a helpful assistant that generates diverse test questions about Braintrust documentation. 
+                    Create realistic questions that users might ask about Braintrust features, implementation, and best practices.
+                    
+                    Generate a mix of question types:
+                    - How-to questions (How do I...?)
+                    - What-is questions (What is...? What are...?)
+                    - Explain questions (Explain how...)
+                    - Best practice questions (What are the best practices for...?)
+                    - Comparison questions (What's the difference between...?)
+                    
+                    Make sure questions are specific and actionable."""
+                },
+                {
+                    "role": "user", 
+                    "content": f"""Based on these Braintrust documentation topics:
+
+{topics_context}
+
+Generate {num_queries} diverse, specific questions that a developer might ask about Braintrust. 
+Return only the questions, one per line, without numbering or bullet points."""
+                }
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        
+        # Parse the generated questions
+        generated_text = response.choices[0].message.content.strip()
+        questions = [q.strip() for q in generated_text.split('\n') if q.strip()]
+        
+        # Filter out any empty questions and limit to requested number
+        questions = [q for q in questions if len(q) > 10][:num_queries]
+        
+        # Fallback to default questions if generation fails
+        if len(questions) < num_queries:
+            fallback_questions = [
+                "How do I set up logging in Braintrust?",
+                "What are the main features of the Braintrust playground?", 
+                "How can I evaluate a chat assistant using Braintrust?",
+                "Explain how to use assertions in Braintrust",
+                "What is the process for human review in Braintrust?"
+            ]
+            questions.extend(fallback_questions[len(questions):num_queries])
+        
+        return questions[:num_queries]
+        
+    except Exception as e:
+        # Fallback to original static queries
+        return [
+            "How do I set up logging in Braintrust?",
+            "What are the main features of the Braintrust playground?",
+            "How can I evaluate a chat assistant using Braintrust?",
+            "Explain how to use assertions in Braintrust",
+            "What is the process for human review in Braintrust?"
+        ]
+
+# Generate dynamic test queries
+test_queries = generate_test_queries()
 
 # Define the RAG tool for OpenAI
 rag_tool = [
@@ -114,8 +192,6 @@ def handle_tool_calls(tool_calls, parent_span):
 @traced
 def process_query(query: str):
     """Process a query using RAG and create an answer."""
-    print(f"\nProcessing query: {query}")
-    
     try:
         # First message to get tool calls
         messages = [
@@ -131,7 +207,7 @@ def process_query(query: str):
         
         # Get initial completion with tool calls
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=messages,
             tools=rag_tool,
             tool_choice="auto"
@@ -155,31 +231,33 @@ def process_query(query: str):
         ])
         
         final_response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=messages,
             max_tokens=1000
         )
         
         answer = final_response.choices[0].message.content
         
-        print(f"Created answer using retrieved documents")
-        print("\nAnswer:", answer)
+        # Return the answer so Braintrust can log it as the span output
+        return answer
         
     except Exception as e:
-        print(f"Error processing query: {str(e)}")
-        raise
+        # Return empty string on error so Braintrust still has an output
+        return f"Error: {str(e)}"
 
 def main():
     """Main function to process all test queries."""
-    print(f"Starting RAG + LLM evaluation with {len(test_queries)} test queries")
+    print(f"Running RAG demo with {len(test_queries)} queries...")
     
     for i, query in enumerate(test_queries, 1):
-        print(f"\nQuery {i}/{len(test_queries)}")
+        print(f"[{i}/{len(test_queries)}] {query}")
         try:
-            process_query(query)
+            answer = process_query(query)
         except Exception as e:
-            print(f"Failed to process query: {str(e)}")
+            print(f"  ❌ Error: {str(e)}")
             continue
+    
+    print("\n✅ Demo completed. Check Braintrust logs for detailed traces.")
 
 if __name__ == "__main__":
     main() 
