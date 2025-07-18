@@ -149,6 +149,8 @@ When answering:
 
 def handle_tool_calls(tool_calls, parent_span):
     """Handle tool calls from OpenAI."""
+    retrieved_documents = []
+    
     for tool_call in tool_calls:
         if tool_call.function.name == "get_documents":
             # Parse the query from the function arguments
@@ -160,10 +162,24 @@ def handle_tool_calls(tool_calls, parent_span):
                 # Call the RAG tool
                 rag_response = get_documents(query)
                 
-                # Log the input query & document ids
+                # Prepare retrieved documents for scorers
+                for doc in rag_response["documents"]:
+                    retrieved_documents.append({
+                        "id": doc["id"],
+                        "title": doc["title"],
+                        "content": doc["content"],
+                        "score": doc["score"],
+                        "tags": doc.get("tags", [])
+                    })
+                
+                # Log the input query & document ids, plus retrieved_documents for scorers
                 span.log(
                     inputs={"query": query},
-                    metadata={"tool_name": "get_documents", "document_ids": [doc['id'] for doc in rag_response["documents"]]}
+                    metadata={
+                        "tool_name": "get_documents", 
+                        "document_ids": [doc['id'] for doc in rag_response["documents"]],
+                        "retrieved_documents": retrieved_documents  # Add this for scorers
+                    }
                 )
                 
                 # Log each document with its metadata
@@ -183,7 +199,8 @@ def handle_tool_calls(tool_calls, parent_span):
                 
                 return {
                     "results": rag_response,
-                    "tool_call_id": tool_call.id
+                    "tool_call_id": tool_call.id,
+                    "retrieved_documents": retrieved_documents  # Return this for the main span
                 }
 
 @traced
@@ -214,26 +231,42 @@ def process_query(query: str):
         parent_span = current_span().export()
         
         # Handle tool calls and get documents
-        tool_response = handle_tool_calls(response.choices[0].message.tool_calls, parent_span)
+        if response.choices[0].message.tool_calls:
+            tool_response = handle_tool_calls(response.choices[0].message.tool_calls, parent_span)
+        else:
+            # No tool calls - create empty response
+            tool_response = {"results": {"documents": []}, "tool_call_id": None, "retrieved_documents": []}
         
         # Add tool results and get final answer
-        messages.extend([
-            response.choices[0].message,
-            {
-                "role": "tool",
-                "name": "get_documents",
-                "content": json.dumps(tool_response["results"]),
-                "tool_call_id": tool_response["tool_call_id"]
-            }
-        ])
-        
-        final_response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages,
-            max_tokens=1000
-        )
+        if tool_response["tool_call_id"]:
+            # There were tool calls - add them to messages
+            messages.extend([
+                response.choices[0].message,
+                {
+                    "role": "tool",
+                    "name": "get_documents",
+                    "content": json.dumps(tool_response["results"]),
+                    "tool_call_id": tool_response["tool_call_id"]
+                }
+            ])
+            
+            final_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=1000
+            )
+        else:
+            # No tool calls - use the original response
+            final_response = response
         
         answer = final_response.choices[0].message.content
+        
+        # Log retrieved documents to the main span for scorers to access
+        current_span().log(
+            metadata={
+                "retrieved_documents": tool_response.get("retrieved_documents", [])
+            }
+        )
         
         # Return the answer so Braintrust can log it as the span output
         return answer
