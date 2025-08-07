@@ -1,0 +1,1634 @@
+{
+  "conversations": [
+    {
+      "id": "conv_001",
+      "description": "Basic introduction to Braintrust and its evaluation features",
+      "turns": [
+        {
+          "role": "user",
+          "content": "What is Braintrust and how does it work?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for information about Braintrust to provide you with a comprehensive answer.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"What is Braintrust and how does it work?\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_001_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_001_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Introduction to Braintrust",
+                "content": "Braintrust is an enterprise-grade stack for building AI products. It provides a unified platform for evaluations, prompt engineering, and observability. Teams use Braintrust to systematically improve their AI applications through continuous testing, monitoring, and data-driven iteration.",
+                "id": "doc_intro_001",
+                "score": 0.95,
+                "tags": ["braintrust", "introduction", "overview"]
+              },
+              {
+                "title": "Core Features and Capabilities",
+                "content": "Key features include experiment tracking for comparing model performance, online logging for production monitoring, dataset management for test data, and integration with popular AI frameworks. The platform supports both offline batch evaluations and online production monitoring.",
+                "id": "doc_features_001",
+                "score": 0.92,
+                "tags": ["features", "capabilities", "core"]
+              },
+              {
+                "title": "Getting Started Guide",
+                "content": "To get started with Braintrust: 1) Sign up for an account, 2) Install the SDK (pip install braintrust), 3) Initialize your project, 4) Create your first evaluation with test data and scoring functions, 5) View results in the web UI for analysis and comparison.",
+                "id": "doc_start_001",
+                "score": 0.88,
+                "tags": ["getting-started", "tutorial", "quickstart"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust is an enterprise-grade stack for building AI products. It provides tools for evaluations, prompt playground, dataset management, and observability. The platform helps teams systematically improve their AI applications through continuous testing and monitoring. Key features include experiment tracking, online logging, and integration with popular AI frameworks."
+        },
+        {
+          "role": "user",
+          "content": "How do I set up evaluations in Braintrust?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll find specific information about setting up evaluations in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"How to set up evaluations in Braintrust tutorial getting started\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_001_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_001_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Setting Up Evaluations",
+                "content": "To set up evaluations: 1) Install Braintrust SDK with pip or npm, 2) Import and initialize with 'from braintrust import Eval, init_dataset', 3) Define your task function that processes inputs, 4) Create scoring functions to measure performance, 5) Run Eval() with your task, data, and scores.",
+                "id": "doc_eval_setup_001",
+                "score": 0.97,
+                "tags": ["evaluations", "setup", "configuration"]
+              },
+              {
+                "title": "Evaluation Best Practices",
+                "content": "Best practices: Use init_dataset() to load test data, implement multiple scoring metrics, compare against baselines, track experiments over time, and use the web UI to analyze results. Always version your datasets and maintain consistent scoring functions.",
+                "id": "doc_eval_best_001",
+                "score": 0.90,
+                "tags": ["evaluations", "best-practices", "tips"]
+              },
+              {
+                "title": "SDK Configuration",
+                "content": "Configure the SDK by setting environment variables: BRAINTRUST_API_KEY for authentication, project name in Eval() call, and optional proxy settings. The SDK automatically handles experiment tracking, result storage, and metric computation.",
+                "id": "doc_sdk_config_001",
+                "score": 0.85,
+                "tags": ["sdk", "configuration", "setup"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "To set up evaluations in Braintrust, you need to: 1) Install the Braintrust SDK using pip or npm, 2) Initialize your project with `braintrust init`, 3) Create an Eval object with your task function and scoring metrics, 4) Define your dataset using `init_dataset`, and 5) Run the evaluation. The SDK automatically tracks experiments, compares results, and provides detailed analytics through the web UI."
+        },
+        {
+          "role": "user",
+          "content": "Can you show me a simple example of an evaluation script?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for code examples of Braintrust evaluation scripts.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust evaluation script example code Python JavaScript\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_001_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_001_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Python Evaluation Example",
+                "content": "from braintrust import Eval, init_dataset\n\ndef task(input):\n    # Your AI logic here\n    response = model.generate(input['query'])\n    return response\n\ndef accuracy_score(output, expected):\n    return 1 if output == expected else 0\n\nEval(\n    'my-project',\n    task=task,\n    data=init_dataset(project='my-project', name='test-data'),\n    scores=[accuracy_score]\n)",
+                "id": "doc_example_py_001",
+                "score": 0.98,
+                "tags": ["example", "python", "code"]
+              },
+              {
+                "title": "JavaScript Evaluation Example",
+                "content": "import { Eval, initDataset } from 'braintrust';\n\nconst task = async (input) => {\n  const response = await model.generate(input.query);\n  return response;\n};\n\nconst accuracyScore = (output, expected) => {\n  return output === expected ? 1 : 0;\n};\n\nawait Eval({\n  projectName: 'my-project',\n  task,\n  data: initDataset({ project: 'my-project', name: 'test-data' }),\n  scores: [accuracyScore]\n});",
+                "id": "doc_example_js_001",
+                "score": 0.94,
+                "tags": ["example", "javascript", "code"]
+              },
+              {
+                "title": "Advanced Evaluation Features",
+                "content": "Advanced features: Use metadata for additional context, implement custom scorers with LLMs, add hooks for logging, use comparison_experiment_name for baselines, and leverage async task functions for parallel processing.",
+                "id": "doc_advanced_eval_001",
+                "score": 0.86,
+                "tags": ["advanced", "evaluations", "features"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Here's a simple Python evaluation script example:\n\n```python\nfrom braintrust import Eval, init_dataset\n\ndef task(input):\n    # Your AI logic here\n    return model.generate(input['query'])\n\ndef accuracy_score(output, expected):\n    return 1 if output == expected else 0\n\nEval(\n    'my-project',\n    task=task,\n    data=init_dataset(project='my-project', name='test-data'),\n    scores=[accuracy_score]\n)\n```\n\nThis script defines a task function, a scoring metric, and runs the evaluation on your dataset."
+        }
+      ]
+    },
+    {
+      "id": "conv_002",
+      "description": "Exploring Braintrust's prompt playground and experimentation features",
+      "turns": [
+        {
+          "role": "user",
+          "content": "Tell me about Braintrust's prompt playground"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about Braintrust's prompt playground feature.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust prompt playground features capabilities\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_002_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_002_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Prompt Playground Overview",
+                "content": "The Braintrust Prompt Playground is an interactive environment for testing and iterating on prompts. It allows real-time experimentation with different prompt variations, side-by-side comparison of outputs, and testing against multiple models simultaneously. The playground integrates seamlessly with your evaluation datasets.",
+                "id": "doc_playground_001",
+                "score": 0.96,
+                "tags": ["playground", "prompts", "testing"]
+              },
+              {
+                "title": "Playground Features",
+                "content": "Key playground features: Live prompt editing with syntax highlighting, variable substitution for dynamic testing, multi-model comparison (GPT-4, Claude, Llama), performance metrics display, cost estimation, and direct deployment to production. Save and version prompts for team collaboration.",
+                "id": "doc_playground_feat_001",
+                "score": 0.93,
+                "tags": ["playground", "features", "capabilities"]
+              },
+              {
+                "title": "Testing and Validation",
+                "content": "Use the playground to validate prompts against your test datasets. Run batch tests, view aggregate metrics, identify edge cases, and compare prompt variations. Export successful prompts directly to your codebase or save as templates for reuse.",
+                "id": "doc_playground_test_001",
+                "score": 0.89,
+                "tags": ["playground", "testing", "validation"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust's prompt playground is an interactive environment for testing and iterating on prompts. It allows you to experiment with different prompt variations, compare outputs side-by-side, and test against multiple models simultaneously. The playground integrates with your evaluation datasets, making it easy to validate prompt changes before deployment."
+        },
+        {
+          "role": "user",
+          "content": "Can I test multiple models at once?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me find more details about multi-model testing in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust compare multiple models testing playground\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_002_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_002_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Multi-Model Testing",
+                "content": "Braintrust supports simultaneous testing across multiple models including GPT-4, GPT-3.5, Claude, Llama, and custom models. Compare outputs side-by-side, analyze performance differences, evaluate cost-quality tradeoffs, and measure latency variations. Select the best model for your specific use case.",
+                "id": "doc_multimodel_001",
+                "score": 0.97,
+                "tags": ["models", "comparison", "testing"]
+              },
+              {
+                "title": "Model Comparison Dashboard",
+                "content": "The comparison dashboard displays: response quality scores, token usage and costs, latency metrics, success rates, and detailed diff views. Filter results by specific criteria, export comparison reports, and set up automated model selection based on performance thresholds.",
+                "id": "doc_model_dash_001",
+                "score": 0.91,
+                "tags": ["models", "dashboard", "comparison"]
+              },
+              {
+                "title": "A/B Testing Models",
+                "content": "Run A/B tests in production with traffic splitting between models. Monitor real-time performance, collect user feedback, automatically adjust routing based on metrics, and gradually roll out model changes. Use statistical significance testing to validate improvements.",
+                "id": "doc_ab_testing_001",
+                "score": 0.87,
+                "tags": ["models", "ab-testing", "production"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Yes! Braintrust supports testing multiple models simultaneously. You can compare outputs from different models like GPT-4, Claude, Llama, and others in parallel. The platform provides side-by-side comparisons, performance metrics, and cost analysis for each model. This helps you choose the best model for your use case based on quality, speed, and cost trade-offs."
+        },
+        {
+          "role": "user",
+          "content": "How does versioning work for prompts?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll look up information about prompt versioning in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust prompt versioning version control management\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_002_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_002_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Prompt Version Control",
+                "content": "Braintrust automatically versions every prompt change with unique identifiers. Track prompt evolution over time, compare version performance, rollback to previous versions, and maintain full audit history. Each version includes metadata: author, timestamp, change description, and performance metrics.",
+                "id": "doc_version_001",
+                "score": 0.95,
+                "tags": ["prompts", "versioning", "version-control"]
+              },
+              {
+                "title": "Deployment and Rollback",
+                "content": "Deploy specific prompt versions to production with confidence. Features include: staged rollouts, instant rollback capabilities, version pinning for stability, and canary deployments. Link prompt versions to experiments for traceability and performance tracking.",
+                "id": "doc_deploy_001",
+                "score": 0.92,
+                "tags": ["deployment", "rollback", "versioning"]
+              },
+              {
+                "title": "Collaboration and Branching",
+                "content": "Collaborate on prompts with branching workflows. Create draft versions, request reviews from teammates, merge approved changes, and maintain production stability. Comments and annotations support discussion. Integration with Git workflows available for code-based prompt management.",
+                "id": "doc_collab_001",
+                "score": 0.88,
+                "tags": ["collaboration", "branching", "teamwork"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust provides built-in version control for prompts. Each prompt change is automatically versioned with a unique identifier. You can track the evolution of prompts over time, compare different versions' performance, rollback to previous versions if needed, and deploy specific versions to production. The system also maintains metadata about who made changes and when, providing full auditability."
+        }
+      ]
+    },
+    {
+      "id": "conv_003",
+      "description": "Understanding datasets and data management in Braintrust",
+      "turns": [
+        {
+          "role": "user",
+          "content": "How do I create and manage datasets in Braintrust?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for information about dataset management in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust create manage datasets data management\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_003_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_003_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Dataset Creation Methods",
+                "content": "Create datasets in Braintrust through multiple methods: 1) Upload CSV/JSON files via web UI, 2) Use SDK with init_dataset() for programmatic creation, 3) Import from existing evaluations, 4) Build incrementally from production logs, 5) Use the API for automated ingestion. All datasets are versioned automatically.",
+                "id": "doc_dataset_create_001",
+                "score": 0.96,
+                "tags": ["datasets", "creation", "management"]
+              },
+              {
+                "title": "Dataset Management Features",
+                "content": "Manage datasets with: version control for tracking changes, sharing across projects and teams, filtering and search capabilities, metadata and tagging, data validation rules, and privacy controls for sensitive data. Export datasets in multiple formats for external use.",
+                "id": "doc_dataset_manage_001",
+                "score": 0.93,
+                "tags": ["datasets", "management", "features"]
+              },
+              {
+                "title": "Data Quality and Validation",
+                "content": "Ensure data quality with validation rules, schema enforcement, duplicate detection, outlier identification, and automated cleaning. Preview data before using in evaluations, set required fields, and define data types. Monitor dataset health with quality metrics.",
+                "id": "doc_data_quality_001",
+                "score": 0.89,
+                "tags": ["datasets", "quality", "validation"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust offers multiple ways to create and manage datasets: 1) Upload CSV/JSON files through the web UI, 2) Use the SDK to programmatically create datasets with `init_dataset()`, 3) Import from existing evaluations, or 4) Build datasets incrementally by logging production data. Datasets are versioned and can be shared across projects and teams."
+        },
+        {
+          "role": "user",
+          "content": "Can I update existing datasets with new examples?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll find information about updating and modifying datasets in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust update dataset add examples modify data\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_003_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_003_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Updating Datasets",
+                "content": "Update datasets incrementally with new examples using dataset.insert() in the SDK or the web UI. Each update creates a new version while preserving history. Add single examples or batch updates, modify existing records, or remove outdated data. Changes are tracked with full audit trail.",
+                "id": "doc_dataset_update_001",
+                "score": 0.97,
+                "tags": ["datasets", "updates", "modifications"]
+              },
+              {
+                "title": "Continuous Dataset Improvement",
+                "content": "Continuously improve datasets by: capturing production edge cases, adding user-reported issues, incorporating feedback loops, and mining logs for interesting examples. Set up automated pipelines to enrich datasets with real-world data while maintaining quality standards.",
+                "id": "doc_dataset_improve_001",
+                "score": 0.91,
+                "tags": ["datasets", "improvement", "continuous"]
+              },
+              {
+                "title": "Dataset Versioning and History",
+                "content": "Every dataset change creates a new version. View version history, compare changes between versions, restore previous versions, and track dataset evolution. Link dataset versions to specific experiments for reproducibility. Merge datasets from different sources.",
+                "id": "doc_dataset_version_001",
+                "score": 0.88,
+                "tags": ["datasets", "versioning", "history"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Yes, you can update existing datasets in Braintrust. The platform supports incremental updates where you can add new examples, modify existing ones, or remove outdated data. Each update creates a new version, preserving the history. You can use the SDK's `dataset.insert()` method or the web UI to add examples. This is particularly useful for continuously improving your datasets with production data and edge cases."
+        },
+        {
+          "role": "user",
+          "content": "What format should my dataset be in?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for dataset format requirements and best practices.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust dataset format JSON CSV structure schema requirements\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_003_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_003_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Dataset Format Specifications",
+                "content": "Braintrust accepts JSON and CSV formats. Recommended JSON structure: [{\"input\": {...}, \"expected\": {...}, \"metadata\": {...}}]. Input contains test data, expected holds optional ground truth, metadata stores additional context. CSV files need column headers matching these fields. Flexible schema allows custom fields.",
+                "id": "doc_format_001",
+                "score": 0.98,
+                "tags": ["datasets", "format", "structure"]
+              },
+              {
+                "title": "Schema Best Practices",
+                "content": "Best practices: Use consistent field names, include unique identifiers, add descriptive metadata, validate data types, and document schema. For complex inputs, use nested JSON. For simple data, CSV works well. Consider data size and processing requirements when choosing format.",
+                "id": "doc_schema_best_001",
+                "score": 0.92,
+                "tags": ["schema", "best-practices", "format"]
+              },
+              {
+                "title": "Import and Export Options",
+                "content": "Import data from: JSON files, CSV spreadsheets, API endpoints, databases, or other evaluation platforms. Export to: JSON for programmatic use, CSV for analysis, or custom formats via API. Transformation tools available for format conversion.",
+                "id": "doc_import_export_001",
+                "score": 0.87,
+                "tags": ["import", "export", "formats"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust datasets support JSON and CSV formats. The recommended structure includes: `input` (your test input), `expected` (optional expected output for scoring), and `metadata` (optional additional context). For JSON: `[{\"input\": {...}, \"expected\": {...}, \"metadata\": {...}}]`. The platform is flexible - you can use any JSON structure and reference fields in your evaluation functions. CSV files should have column headers matching these field names."
+        }
+      ]
+    },
+    {
+      "id": "conv_004",
+      "description": "Learning about scoring and metrics in Braintrust evaluations",
+      "turns": [
+        {
+          "role": "user",
+          "content": "What scoring methods does Braintrust support?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about scoring methods and metrics in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust scoring methods metrics evaluation scores\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_004_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_004_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Scoring Methods Overview",
+                "content": "Braintrust supports diverse scoring methods: 1) Custom scoring functions in code, 2) Built-in scorers (Levenshtein, BLEU, numeric), 3) LLM-as-judge for qualitative assessment, 4) Binary scores (pass/fail), 5) Continuous scores (0-1 range), 6) Multi-dimensional scoring. Combine multiple scorers for comprehensive evaluation.",
+                "id": "doc_scoring_001",
+                "score": 0.97,
+                "tags": ["scoring", "metrics", "evaluation"]
+              },
+              {
+                "title": "Built-in Scorers",
+                "content": "Available built-in scorers: ExactMatch for equality, Levenshtein for string similarity, NumericDifference for number comparison, SemanticSimilarity using embeddings, FactualAccuracy with LLM validation, and ResponseTime for latency. Configure thresholds and weights for each scorer.",
+                "id": "doc_builtin_score_001",
+                "score": 0.94,
+                "tags": ["scoring", "built-in", "metrics"]
+              },
+              {
+                "title": "Custom Scoring Functions",
+                "content": "Create custom scorers by defining functions that return scores between 0 and 1. Access input, output, expected, and metadata in your scorer. Support for async scoring, external API calls, and complex business logic. Return additional metadata for detailed analysis.",
+                "id": "doc_custom_score_001",
+                "score": 0.90,
+                "tags": ["scoring", "custom", "functions"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust supports multiple scoring methods: 1) Custom scoring functions you define in code, 2) Built-in scorers like Levenshtein distance and numeric difference, 3) LLM-as-judge scorers using models to evaluate outputs, 4) Binary scores (pass/fail), and 5) Continuous scores (0-1 range). You can combine multiple scorers in a single evaluation to measure different aspects of performance."
+        },
+        {
+          "role": "user",
+          "content": "How do I implement an LLM-as-judge scorer?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me find specific information about implementing LLM-as-judge scorers.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust LLM as judge scorer implementation example\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_004_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_004_2",
+          "content": {
+            "documents": [
+              {
+                "title": "LLM-as-Judge Implementation",
+                "content": "Implement LLM-as-judge with LLMClassifier:\n\nfrom braintrust import LLMClassifier\n\nrelevance_scorer = LLMClassifier(\n    name=\"relevance\",\n    prompt=\"Is this answer relevant to the question? Reply Y or N\",\n    model=\"gpt-4\",\n    choices=[\"Y\", \"N\"]\n)\n\nUse in evaluations for automated quality assessment. Configure prompts for specific criteria.",
+                "id": "doc_llm_judge_001",
+                "score": 0.98,
+                "tags": ["llm-judge", "scoring", "implementation"]
+              },
+              {
+                "title": "Advanced LLM Scoring",
+                "content": "Advanced LLM scoring: Use chain-of-thought prompting for detailed reasoning, implement multi-criteria evaluation, score on continuous scale (0-10), provide structured feedback, and calibrate with human judgments. Cache LLM calls for efficiency.",
+                "id": "doc_llm_advanced_001",
+                "score": 0.93,
+                "tags": ["llm-judge", "advanced", "scoring"]
+              },
+              {
+                "title": "LLM Scorer Best Practices",
+                "content": "Best practices: Use clear, specific prompts, provide examples in prompts, validate LLM scores against human ratings, monitor scorer consistency, use multiple LLM judges for consensus, and implement fallback scoring for failures. Consider cost vs accuracy tradeoffs.",
+                "id": "doc_llm_best_001",
+                "score": 0.89,
+                "tags": ["llm-judge", "best-practices", "tips"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "To implement an LLM-as-judge scorer in Braintrust, you can use the `LLMClassifier` scorer. Here's an example:\n\n```python\nfrom braintrust import LLMClassifier\n\nrelevance_scorer = LLMClassifier(\n    name=\"relevance\",\n    prompt=\"Is this answer relevant to the question? Reply Y or N\",\n    model=\"gpt-4\",\n    choices=[\"Y\", \"N\"]\n)\n\nEval(\n    project=\"my-project\",\n    task=my_task,\n    scores=[relevance_scorer]\n)\n```\n\nThe LLM evaluates each output and returns structured scores you can track over time."
+        },
+        {
+          "role": "user",
+          "content": "Can I track multiple metrics simultaneously?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about using multiple metrics in evaluations.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust multiple metrics scores simultaneous evaluation tracking\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_004_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_004_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Multi-Metric Evaluation",
+                "content": "Track multiple metrics simultaneously by passing an array of scoring functions to the scores parameter. Each metric is tracked independently: accuracy, latency, relevance, toxicity, cost, and custom business metrics. View all metrics side-by-side in the UI for comprehensive analysis.",
+                "id": "doc_multi_metric_001",
+                "score": 0.97,
+                "tags": ["metrics", "multiple", "tracking"]
+              },
+              {
+                "title": "Metric Aggregation and Analysis",
+                "content": "Aggregate metrics across examples: view distributions, calculate averages and percentiles, identify outliers, and track trends. Set weights for different metrics to compute overall scores. Create custom dashboards focusing on specific metric combinations.",
+                "id": "doc_metric_agg_001",
+                "score": 0.92,
+                "tags": ["metrics", "aggregation", "analysis"]
+              },
+              {
+                "title": "Performance Monitoring",
+                "content": "Monitor metric changes across experiments. Set thresholds and alerts for metric degradation. Compare metric trade-offs between models. Use metric correlation analysis to understand relationships. Export metric data for external analysis.",
+                "id": "doc_perf_monitor_001",
+                "score": 0.88,
+                "tags": ["metrics", "monitoring", "performance"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Absolutely! Braintrust is designed to track multiple metrics simultaneously. You can pass an array of scoring functions to the `scores` parameter in your evaluation. Each metric is tracked independently, allowing you to monitor accuracy, latency, relevance, toxicity, and custom business metrics all in one evaluation run. The UI displays all metrics side-by-side for easy comparison and shows how each metric changes across experiments."
+        }
+      ]
+    },
+    {
+      "id": "conv_005",
+      "description": "Exploring logging and observability features",
+      "turns": [
+        {
+          "role": "user",
+          "content": "How does logging work in Braintrust?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for information about Braintrust's logging capabilities.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust logging observability tracing monitoring\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_005_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_005_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Logging and Observability",
+                "content": "Braintrust provides comprehensive logging: capture all LLM interactions, track custom events and spans, measure latency and costs, log metadata and context, and organize into traces. Use the SDK to log production data with automatic batching and retry logic. Search and filter logs in the web UI.",
+                "id": "doc_logging_001",
+                "score": 0.96,
+                "tags": ["logging", "observability", "monitoring"]
+              },
+              {
+                "title": "Trace Architecture",
+                "content": "Traces organize related operations: parent spans for requests, child spans for LLM calls, custom spans for business logic, and automatic span correlation. View trace waterfall diagrams, identify bottlenecks, and debug complex workflows. Export traces for external analysis.",
+                "id": "doc_trace_001",
+                "score": 0.93,
+                "tags": ["tracing", "spans", "architecture"]
+              },
+              {
+                "title": "Production Monitoring",
+                "content": "Monitor production systems: real-time log streaming, error tracking and alerting, performance metrics, user feedback integration, and anomaly detection. Convert interesting logs to test cases. Set up dashboards for key metrics. Integrate with existing monitoring tools.",
+                "id": "doc_prod_monitor_001",
+                "score": 0.90,
+                "tags": ["production", "monitoring", "observability"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust provides comprehensive logging and observability features. You can log production traces using the SDK, which captures inputs, outputs, latency, and custom metadata. The platform automatically organizes logs into traces and spans, making it easy to debug complex AI workflows. Logs are searchable, filterable, and can be converted into datasets for continuous improvement."
+        },
+        {
+          "role": "user",
+          "content": "What's the difference between online and offline evaluation?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll find information about online vs offline evaluation in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust online offline evaluation difference production monitoring\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_005_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_005_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Online vs Offline Evaluation",
+                "content": "Offline evaluation: Run on pre-collected datasets before deployment using Eval(). Test changes safely, compare alternatives, ensure quality standards. Online evaluation: Monitor production in real-time, log live interactions, compute scores on actual usage, detect drift and degradation. Both use same scoring functions.",
+                "id": "doc_online_offline_001",
+                "score": 0.97,
+                "tags": ["evaluation", "online", "offline"]
+              },
+              {
+                "title": "Online Evaluation Setup",
+                "content": "Set up online evaluation: instrument production code with logging, define online scoring functions, configure sampling rates, set alert thresholds, and create feedback loops. Automatically score production data using same metrics as offline evals for consistency.",
+                "id": "doc_online_setup_001",
+                "score": 0.92,
+                "tags": ["online", "evaluation", "setup"]
+              },
+              {
+                "title": "Evaluation Strategy",
+                "content": "Best practice evaluation flow: 1) Develop with offline evals on test data, 2) Validate with larger datasets, 3) Deploy with online monitoring, 4) Collect production examples, 5) Update test datasets, 6) Iterate. Maintain parity between online and offline metrics.",
+                "id": "doc_eval_strategy_001",
+                "score": 0.88,
+                "tags": ["evaluation", "strategy", "workflow"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "In Braintrust, offline evaluation runs on pre-collected datasets to test changes before deployment - this is what you do with the `Eval()` function. Online evaluation monitors your production system in real-time, logging actual user interactions and computing scores on live data. Online evaluation helps detect drift, monitor performance, and collect real-world examples for your datasets. Both use the same scoring functions for consistency."
+        },
+        {
+          "role": "user",
+          "content": "How can I debug issues in production?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for debugging and troubleshooting features in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust debug production issues troubleshooting trace spans\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_005_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_005_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Production Debugging Tools",
+                "content": "Debug production issues with: trace view showing complete execution flow, filtering by error status or latency, comparing failing vs successful traces, user feedback linking, and example export to datasets. Full context preservation enables issue reproduction. Time-travel debugging through historical logs.",
+                "id": "doc_debug_prod_001",
+                "score": 0.97,
+                "tags": ["debugging", "production", "troubleshooting"]
+              },
+              {
+                "title": "Error Analysis",
+                "content": "Analyze errors systematically: automatic error categorization, stack trace capture, request/response logging, correlation with metrics, and pattern detection. Group similar errors, track error rates over time, and set up automated alerts for new error types.",
+                "id": "doc_error_analysis_001",
+                "score": 0.93,
+                "tags": ["errors", "analysis", "debugging"]
+              },
+              {
+                "title": "Root Cause Investigation",
+                "content": "Investigate root causes: drill down from symptoms to sources, correlate with deployments, analyze input patterns, review model behavior changes, and examine environmental factors. Use comparison tools to identify what changed. Export problematic cases for offline debugging.",
+                "id": "doc_root_cause_001",
+                "score": 0.89,
+                "tags": ["debugging", "root-cause", "investigation"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust offers powerful debugging tools: 1) Trace view shows the complete execution flow with all LLM calls, tool uses, and custom spans, 2) You can filter logs by error status, latency, or custom tags, 3) Compare failing traces with successful ones to identify patterns, 4) Use the feedback API to capture user reports and link them to specific traces, 5) Export problematic examples directly to datasets for regression testing. The platform maintains full context, making it easy to reproduce and fix issues."
+        }
+      ]
+    },
+    {
+      "id": "conv_006",
+      "description": "Understanding integration capabilities and API usage",
+      "turns": [
+        {
+          "role": "user",
+          "content": "What integrations does Braintrust support?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about Braintrust's integration capabilities.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust integrations API SDK languages frameworks supported\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_006_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_006_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Integration Overview",
+                "content": "Braintrust integrations: Python and TypeScript/JavaScript SDKs, REST API for any language, LangChain and LlamaIndex support, Vercel AI SDK compatibility, OpenAI/Anthropic/Google proxies, CI/CD pipeline integration, and webhook support. Works with all major LLM providers and frameworks.",
+                "id": "doc_integration_001",
+                "score": 0.96,
+                "tags": ["integrations", "api", "sdk"]
+              },
+              {
+                "title": "Framework Support",
+                "content": "Native framework integrations: LangChain callbacks and wrappers, LlamaIndex observability handlers, Vercel AI SDK middleware, FastAPI/Flask decorators, Next.js integration, and Streamlit components. Drop-in replacements minimize code changes.",
+                "id": "doc_framework_001",
+                "score": 0.93,
+                "tags": ["frameworks", "integrations", "support"]
+              },
+              {
+                "title": "API and Webhooks",
+                "content": "RESTful API for custom integrations: manage projects and datasets, trigger evaluations, retrieve results, configure webhooks for events, and implement custom workflows. GraphQL API available for complex queries. Real-time websocket connections for streaming.",
+                "id": "doc_api_webhook_001",
+                "score": 0.89,
+                "tags": ["api", "webhooks", "rest"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust offers extensive integration support: SDKs for Python, TypeScript/JavaScript, and REST API for any language. It integrates with popular AI frameworks like LangChain, LlamaIndex, and Vercel AI SDK. The platform works with all major LLM providers (OpenAI, Anthropic, Google, etc.) and can proxy requests for automatic logging. It also integrates with CI/CD systems for automated testing."
+        },
+        {
+          "role": "user",
+          "content": "How do I integrate Braintrust with my existing LangChain application?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me find specific information about LangChain integration.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust LangChain integration setup configuration example\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_006_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_006_2",
+          "content": {
+            "documents": [
+              {
+                "title": "LangChain Integration Guide",
+                "content": "Integrate with LangChain using wrap_openai:\n\nfrom braintrust import wrap_openai\nfrom langchain.llms import OpenAI\n\nwrapped_client = wrap_openai(OpenAI())\nchain = LLMChain(llm=wrapped_client, prompt=prompt)\n\nAutomatically logs all prompts, completions, and metadata. Use callbacks for granular control.",
+                "id": "doc_langchain_001",
+                "score": 0.98,
+                "tags": ["langchain", "integration", "setup"]
+              },
+              {
+                "title": "LangChain Callbacks",
+                "content": "Use Braintrust callbacks for detailed tracking:\n\nfrom braintrust import BraintrustCallbackHandler\n\nhandler = BraintrustCallbackHandler(project=\"my-project\")\nchain.run(input, callbacks=[handler])\n\nCaptures chain execution, tool calls, and intermediate steps. Configure logging levels and filtering.",
+                "id": "doc_langchain_callback_001",
+                "score": 0.94,
+                "tags": ["langchain", "callbacks", "tracking"]
+              },
+              {
+                "title": "Advanced LangChain Features",
+                "content": "Advanced integration: log vector store operations, track retrieval metrics, monitor agent decisions, capture memory updates, and trace multi-step chains. Export LangChain runs as Braintrust experiments. Use custom metadata for business context.",
+                "id": "doc_langchain_adv_001",
+                "score": 0.89,
+                "tags": ["langchain", "advanced", "features"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "To integrate Braintrust with LangChain, use the `wrap_openai` function to automatically log all LLM calls:\n\n```python\nfrom braintrust import wrap_openai\nfrom langchain.llms import OpenAI\n\n# Wrap the OpenAI client\nwrapped_client = wrap_openai(OpenAI())\n\n# Use in your LangChain app\nchain = LLMChain(llm=wrapped_client, prompt=prompt)\n```\n\nThis automatically logs all prompts, completions, and metadata to Braintrust. You can also use callbacks for more granular control over logging."
+        },
+        {
+          "role": "user",
+          "content": "Can I use Braintrust as a proxy for OpenAI?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about using Braintrust as an OpenAI proxy.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust OpenAI proxy endpoint API compatibility\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_006_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_006_3",
+          "content": {
+            "documents": [
+              {
+                "title": "OpenAI Proxy Configuration",
+                "content": "Use Braintrust as OpenAI proxy:\n\nimport openai\n\nopenai.base_url = \"https://api.braintrust.dev/v1/proxy\"\nopenai.api_key = \"your-braintrust-api-key\"\n\nDrop-in replacement for OpenAI API. Automatically logs requests while forwarding to OpenAI. Supports caching, fallbacks, and rate limiting.",
+                "id": "doc_proxy_001",
+                "score": 0.98,
+                "tags": ["proxy", "openai", "configuration"]
+              },
+              {
+                "title": "Proxy Features",
+                "content": "Proxy capabilities: transparent request forwarding, automatic logging and tracing, response caching for cost savings, fallback providers for reliability, rate limiting and retry logic, and request/response transformation. Works with any OpenAI-compatible client.",
+                "id": "doc_proxy_features_001",
+                "score": 0.94,
+                "tags": ["proxy", "features", "capabilities"]
+              },
+              {
+                "title": "Multi-Provider Proxy",
+                "content": "Proxy multiple providers through Braintrust: OpenAI, Anthropic Claude, Google Gemini, Cohere, and custom endpoints. Unified interface for all providers. Automatic provider selection based on availability and performance. Load balancing across providers.",
+                "id": "doc_multi_proxy_001",
+                "score": 0.90,
+                "tags": ["proxy", "providers", "multi-provider"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Yes! Braintrust can act as a drop-in replacement proxy for OpenAI. Simply change your base URL to Braintrust's proxy endpoint and include your API key. This works with any OpenAI-compatible client:\n\n```python\nimport openai\n\nopenai.base_url = \"https://api.braintrust.dev/v1/proxy\"\nopenai.api_key = \"your-braintrust-api-key\"\n```\n\nThe proxy automatically logs all requests while forwarding them to OpenAI, providing observability without code changes. It also supports caching and fallback providers."
+        }
+      ]
+    },
+    {
+      "id": "conv_007",
+      "description": "Exploring experiment tracking and comparison features",
+      "turns": [
+        {
+          "role": "user",
+          "content": "How does experiment tracking work in Braintrust?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for information about experiment tracking in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust experiment tracking comparison management\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_007_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_007_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Experiment Tracking",
+                "content": "Every evaluation creates an experiment capturing: code version, parameters, inputs/outputs, scores, and metadata. Experiments are automatically compared to baselines showing deltas and regressions. Complete history enables progress tracking and understanding what changes improved performance.",
+                "id": "doc_exp_track_001",
+                "score": 0.96,
+                "tags": ["experiments", "tracking", "comparison"]
+              },
+              {
+                "title": "Experiment Management",
+                "content": "Manage experiments: organize by project, tag for categorization, search and filter, archive old runs, and export results. Link experiments to code commits, PRs, and deployments. Maintain experiment lineage for reproducibility.",
+                "id": "doc_exp_manage_001",
+                "score": 0.92,
+                "tags": ["experiments", "management", "organization"]
+              },
+              {
+                "title": "Baseline Comparison",
+                "content": "Compare against baselines: automatic baseline selection, manual baseline override, multiple baseline support, and statistical significance testing. View score improvements, regressions, and unchanged metrics. Drill down to example-level differences.",
+                "id": "doc_baseline_001",
+                "score": 0.89,
+                "tags": ["baseline", "comparison", "experiments"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust automatically tracks every evaluation run as an experiment. Each experiment captures your code version, parameters, inputs, outputs, and scores. Experiments are automatically compared to a baseline (usually your production or previous best version), showing score deltas and regressions. The platform maintains a complete history, allowing you to track progress over time and understand what changes improved or hurt performance."
+        },
+        {
+          "role": "user",
+          "content": "Can I compare multiple experiments at once?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll find details about comparing multiple experiments simultaneously.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust compare multiple experiments visualization analysis\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_007_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_007_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Multi-Experiment Comparison",
+                "content": "Compare multiple experiments simultaneously: select any experiments for side-by-side analysis, view metrics across all selected runs, visualize trends with charts and graphs, identify best performing configurations, and export comparison reports. Supports comparing across different models and approaches.",
+                "id": "doc_multi_compare_001",
+                "score": 0.97,
+                "tags": ["comparison", "multiple", "experiments"]
+              },
+              {
+                "title": "Comparison Visualization",
+                "content": "Visualization tools: scatter plots for metric relationships, time series for trend analysis, distribution plots for score ranges, heatmaps for correlation, and parallel coordinates for multi-dimensional analysis. Interactive charts with drill-down capabilities.",
+                "id": "doc_viz_compare_001",
+                "score": 0.93,
+                "tags": ["visualization", "comparison", "charts"]
+              },
+              {
+                "title": "A/B Testing Analysis",
+                "content": "A/B testing support: compare experiment variants, calculate statistical significance, determine winner with confidence intervals, analyze segment performance, and make data-driven decisions. Automated reports for stakeholder communication.",
+                "id": "doc_ab_analysis_001",
+                "score": 0.89,
+                "tags": ["ab-testing", "analysis", "comparison"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Yes, Braintrust supports comparing multiple experiments simultaneously. The comparison view lets you select any experiments and see side-by-side metrics, score distributions, and example-level differences. You can visualize trends across experiments with charts, identify which changes had the most impact, and drill down to specific examples that improved or regressed. This is particularly useful for A/B testing different approaches."
+        },
+        {
+          "role": "user",
+          "content": "How do I set a baseline for comparison?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for information about setting baselines in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust set baseline comparison reference experiment\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_007_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_007_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Setting Baselines",
+                "content": "Set baselines multiple ways: use --comparison-experiment-name in CLI, configure default baseline in project settings, tag experiments as 'production', or programmatically with Eval(comparison_experiment_name='baseline-v1'). Platform automatically computes deltas highlighting improvements and regressions.",
+                "id": "doc_set_baseline_001",
+                "score": 0.97,
+                "tags": ["baseline", "configuration", "comparison"]
+              },
+              {
+                "title": "Baseline Management",
+                "content": "Manage baselines effectively: maintain stable production baseline, create feature-specific baselines, use rolling baselines for continuous improvement, and archive historical baselines. Update baselines after successful deployments to track incremental progress.",
+                "id": "doc_baseline_mgmt_001",
+                "score": 0.92,
+                "tags": ["baseline", "management", "best-practices"]
+              },
+              {
+                "title": "Comparison Strategies",
+                "content": "Baseline strategies: compare against production for deployment decisions, previous version for incremental changes, best historical for optimization, or custom baseline for specific scenarios. Use multiple baselines for comprehensive analysis.",
+                "id": "doc_comp_strategy_001",
+                "score": 0.88,
+                "tags": ["baseline", "strategy", "comparison"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "In Braintrust, you can set baselines in multiple ways: 1) Use `--comparison-experiment-name` in the CLI to specify a baseline, 2) Set a default baseline in project settings for automatic comparison, 3) Tag an experiment as 'production' to make it the baseline, or 4) Programmatically set it using `Eval(..., comparison_experiment_name='baseline-v1')`. The platform automatically computes deltas between your current run and the baseline, highlighting improvements and regressions."
+        }
+      ]
+    },
+    {
+      "id": "conv_008",
+      "description": "Learning about team collaboration and access control",
+      "turns": [
+        {
+          "role": "user",
+          "content": "How can teams collaborate in Braintrust?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about team collaboration features in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust team collaboration sharing access control permissions\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_008_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_008_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Team Collaboration Features",
+                "content": "Braintrust enables team collaboration through: shared projects with unified access, role-based permissions (admin/editor/viewer), comments and annotations on experiments, shared prompt libraries, team dashboards, and user attribution for all changes. Real-time collaboration on evaluations and datasets.",
+                "id": "doc_team_collab_001",
+                "score": 0.96,
+                "tags": ["team", "collaboration", "sharing"]
+              },
+              {
+                "title": "Access Control",
+                "content": "Granular access control: project-level permissions, dataset privacy settings, API key management, SSO integration, and audit logs. Define who can view, edit, or delete resources. Implement approval workflows for production changes.",
+                "id": "doc_access_001",
+                "score": 0.93,
+                "tags": ["access-control", "permissions", "security"]
+              },
+              {
+                "title": "Knowledge Sharing",
+                "content": "Share knowledge across teams: documented experiments with context, reusable evaluation templates, best practice libraries, shared scoring functions, and team wikis. Export reports for stakeholders. Maintain institutional knowledge.",
+                "id": "doc_knowledge_001",
+                "score": 0.89,
+                "tags": ["knowledge", "sharing", "documentation"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust is built for team collaboration with features like: shared projects where teams can access the same experiments and datasets, role-based access control (admin, editor, viewer roles), comments and annotations on experiments for discussion, shared prompt libraries and evaluation templates, and team-wide dashboards for tracking overall progress. All changes are attributed to users for accountability."
+        },
+        {
+          "role": "user",
+          "content": "Can I control who sees sensitive data?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me find information about data privacy and access control in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust data privacy security access control sensitive PII\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_008_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_008_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Data Privacy Controls",
+                "content": "Protect sensitive data with: project-level access restrictions, automatic PII redaction, private projects for limited visibility, field-level encryption, and on-premise deployment options. SOC 2 compliant with enterprise security standards. Configure data retention policies.",
+                "id": "doc_privacy_001",
+                "score": 0.97,
+                "tags": ["privacy", "security", "data-protection"]
+              },
+              {
+                "title": "PII Management",
+                "content": "Handle PII safely: automatic detection and masking, configurable redaction rules, audit trails for data access, encryption at rest and in transit, and GDPR compliance features. Define sensitive fields that require special handling.",
+                "id": "doc_pii_001",
+                "score": 0.94,
+                "tags": ["pii", "gdpr", "compliance"]
+              },
+              {
+                "title": "Enterprise Security",
+                "content": "Enterprise features: SSO with SAML/OIDC, IP allowlisting, private cloud deployment, bring-your-own-key encryption, and compliance certifications. Regular security audits and penetration testing. Data residency options available.",
+                "id": "doc_enterprise_sec_001",
+                "score": 0.90,
+                "tags": ["enterprise", "security", "compliance"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Yes, Braintrust provides granular access control for sensitive data. You can: 1) Set project-level permissions to restrict access, 2) Use data redaction to automatically mask PII in logs, 3) Create private projects visible only to specific team members, 4) Implement field-level encryption for sensitive inputs/outputs, 5) Use on-premise deployment for complete data control. The platform is SOC 2 compliant and supports enterprise security requirements."
+        },
+        {
+          "role": "user",
+          "content": "How do I share results with stakeholders?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about sharing and reporting features.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust share results reports export stakeholders dashboard\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_008_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_008_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Sharing and Reporting",
+                "content": "Share results effectively: generate shareable links with optional expiration, export reports as PDF/CSV, create executive dashboards, automate email/Slack reports, and integrate with BI tools via API. Control data visibility in shared views.",
+                "id": "doc_sharing_001",
+                "score": 0.96,
+                "tags": ["sharing", "reporting", "stakeholders"]
+              },
+              {
+                "title": "Dashboard Creation",
+                "content": "Build custom dashboards: drag-and-drop widgets, real-time metric updates, customizable visualizations, role-based views, and embedded analytics. Share dashboards with read-only access. Schedule automated snapshots for regular updates.",
+                "id": "doc_dashboard_001",
+                "score": 0.92,
+                "tags": ["dashboards", "visualization", "reporting"]
+              },
+              {
+                "title": "Report Automation",
+                "content": "Automate reporting: scheduled report generation, customizable templates, distribution lists, conditional alerts, and trend summaries. Include charts, tables, and narrative insights. Integrate with existing reporting workflows.",
+                "id": "doc_report_auto_001",
+                "score": 0.88,
+                "tags": ["automation", "reports", "communication"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust offers several ways to share results: 1) Generate shareable links to specific experiments or comparisons (with optional expiration), 2) Export reports as PDF or CSV for presentations, 3) Create custom dashboards with key metrics for executives, 4) Set up automated reports sent via email or Slack, 5) Use the public API to integrate data into your own reporting tools. You can control what data is visible in shared views to protect sensitive information."
+        }
+      ]
+    },
+    {
+      "id": "conv_009",
+      "description": "Understanding cost optimization and performance monitoring",
+      "turns": [
+        {
+          "role": "user",
+          "content": "How can Braintrust help me optimize costs?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for information about cost optimization features in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust cost optimization monitoring usage pricing tokens\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_009_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_009_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Cost Optimization Features",
+                "content": "Optimize costs with Braintrust: automatic token tracking for all LLM calls, cost comparison across models/providers, intelligent caching to avoid redundant calls, expensive prompt identification, and budget alerts with spending limits. Find optimal quality-cost balance.",
+                "id": "doc_cost_opt_001",
+                "score": 0.97,
+                "tags": ["cost", "optimization", "budget"]
+              },
+              {
+                "title": "Token Usage Analytics",
+                "content": "Detailed token analytics: per-request breakdown, model-specific usage, prompt vs completion tokens, cost trending over time, and optimization recommendations. Identify token-heavy operations and suggest alternatives. Export usage data for billing.",
+                "id": "doc_token_001",
+                "score": 0.93,
+                "tags": ["tokens", "usage", "analytics"]
+              },
+              {
+                "title": "Cost Reduction Strategies",
+                "content": "Reduce costs effectively: use smaller models where appropriate, implement prompt compression, leverage caching aggressively, batch similar requests, and optimize token usage. Set up fallback to cheaper models for non-critical paths.",
+                "id": "doc_cost_reduce_001",
+                "score": 0.89,
+                "tags": ["cost-reduction", "strategies", "optimization"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust helps optimize costs through: 1) Automatic token usage tracking for all LLM calls, 2) Cost comparison across different models and providers, 3) Caching to avoid redundant API calls, 4) Identifying expensive prompts and suggesting optimizations, 5) Budget alerts and spending limits per project. The platform shows cost-per-request metrics and helps you find the optimal balance between quality and cost."
+        },
+        {
+          "role": "user",
+          "content": "Can I set up caching for repeated queries?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me find specific information about caching capabilities.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust caching cache repeated queries performance optimization\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_009_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_009_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Caching System",
+                "content": "Intelligent caching automatically stores responses for identical requests. Enabled by default when using the proxy. Configure TTL, invalidation rules, and semantic similarity matching. Team-wide cache sharing reduces costs during development and testing. Especially useful for deterministic evaluations.",
+                "id": "doc_caching_001",
+                "score": 0.98,
+                "tags": ["caching", "performance", "optimization"]
+              },
+              {
+                "title": "Cache Configuration",
+                "content": "Configure caching: set cache duration (TTL), define cache keys, implement cache warming, configure storage backends, and monitor hit rates. Use semantic caching for similar queries. Invalidate cache on model updates or prompt changes.",
+                "id": "doc_cache_config_001",
+                "score": 0.94,
+                "tags": ["cache", "configuration", "settings"]
+              },
+              {
+                "title": "Cache Analytics",
+                "content": "Monitor cache performance: hit/miss ratios, cost savings metrics, response time improvements, cache size and growth, and effectiveness by query type. Optimize cache strategy based on usage patterns. Export cache analytics for reporting.",
+                "id": "doc_cache_analytics_001",
+                "score": 0.90,
+                "tags": ["cache", "analytics", "monitoring"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Yes! Braintrust includes intelligent caching that automatically stores responses for identical requests. When using the proxy, caching is enabled by default and works across your team. You can configure cache TTL, invalidation rules, and use cache keys for semantic similarity matching. This dramatically reduces costs during development and testing, where the same prompts are often run multiple times. The cache is especially useful for evaluations with deterministic outputs."
+        },
+        {
+          "role": "user",
+          "content": "How do I monitor latency and performance?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll search for performance monitoring features in Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust latency performance monitoring metrics speed optimization\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_009_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_009_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Performance Monitoring",
+                "content": "Track latency automatically: end-to-end request duration, individual LLM call timing, tool execution time, and P50/P95/P99 percentiles. Latency dashboards, degradation alerts, and trace flamegraphs identify bottlenecks. Compare latency across models and implementations.",
+                "id": "doc_perf_monitor_001",
+                "score": 0.97,
+                "tags": ["performance", "latency", "monitoring"]
+              },
+              {
+                "title": "Performance Optimization",
+                "content": "Optimize performance: identify slow operations, parallel processing opportunities, caching candidates, and model selection. Receive optimization suggestions based on patterns. Set SLA thresholds and monitor compliance. A/B test performance improvements.",
+                "id": "doc_perf_optimize_001",
+                "score": 0.93,
+                "tags": ["optimization", "performance", "speed"]
+              },
+              {
+                "title": "Real-time Metrics",
+                "content": "Real-time performance metrics: live latency tracking, throughput monitoring, error rates, and resource utilization. Stream metrics to external monitoring systems. Create custom alerts for performance anomalies. Historical trend analysis available.",
+                "id": "doc_realtime_metrics_001",
+                "score": 0.89,
+                "tags": ["metrics", "real-time", "monitoring"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Braintrust automatically tracks latency for every operation: 1) End-to-end request duration, 2) Individual LLM call timing, 3) Tool/function execution time, 4) P50/P95/P99 latency percentiles over time. The platform provides latency dashboards, alerts for performance degradation, and trace flamegraphs to identify bottlenecks. You can compare latency across different models, prompts, and implementations to optimize for speed. The UI highlights slow operations and suggests optimization opportunities."
+        }
+      ]
+    },
+    {
+      "id": "conv_010",
+      "description": "Exploring advanced features and best practices",
+      "turns": [
+        {
+          "role": "user",
+          "content": "What are some best practices for using Braintrust effectively?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for best practices and recommendations for using Braintrust.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust best practices recommendations tips effective usage\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_010_1",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_010_1",
+          "content": {
+            "documents": [
+              {
+                "title": "Braintrust Best Practices",
+                "content": "Key best practices: 1) Start with small, high-quality datasets, 2) Define clear scoring functions aligned with business goals, 3) Run evaluations in CI/CD, 4) Use production logging for dataset improvement, 5) Version prompts systematically, 6) Compare approaches before deploying, 7) Set metric degradation alerts, 8) Use tags and metadata for organization.",
+                "id": "doc_best_practices_001",
+                "score": 0.97,
+                "tags": ["best-practices", "recommendations", "tips"]
+              },
+              {
+                "title": "Evaluation Strategy",
+                "content": "Effective evaluation strategy: establish baselines early, maintain golden test sets, automate regression testing, incorporate user feedback, iterate based on data, and document decisions. Balance comprehensive testing with development velocity.",
+                "id": "doc_eval_strategy_001",
+                "score": 0.93,
+                "tags": ["strategy", "evaluation", "planning"]
+              },
+              {
+                "title": "Team Workflows",
+                "content": "Optimize team workflows: standardize evaluation practices, share successful prompts, maintain documentation, conduct regular reviews, and establish quality gates. Create templates for common tasks. Foster culture of experimentation and measurement.",
+                "id": "doc_team_workflow_001",
+                "score": 0.89,
+                "tags": ["workflow", "team", "process"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Key best practices for Braintrust include: 1) Start with a small, high-quality dataset and expand gradually, 2) Define clear, measurable scoring functions aligned with business goals, 3) Run evaluations in CI/CD to catch regressions early, 4) Use production logging to continuously improve datasets, 5) Version your prompts and track changes systematically, 6) Compare multiple approaches before deploying, 7) Set up alerts for metric degradation, 8) Use tags and metadata for better organization."
+        },
+        {
+          "role": "user",
+          "content": "How should I structure my evaluation workflow?"
+        },
+        {
+          "role": "assistant",
+          "content": "I'll find information about structuring evaluation workflows effectively.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust evaluation workflow structure pipeline CI/CD automation\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_010_2",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_010_2",
+          "content": {
+            "documents": [
+              {
+                "title": "Evaluation Workflow Structure",
+                "content": "Recommended workflow: 1) Development: rapid prompt iteration in playground, 2) Testing: local evaluations with data subset, 3) Validation: full evaluations before PR merge, 4) CI/CD: automated evals with pass/fail thresholds, 5) Staging: compare against production baseline, 6) Production: online evaluation for monitoring, 7) Iteration: use feedback to update datasets.",
+                "id": "doc_workflow_struct_001",
+                "score": 0.98,
+                "tags": ["workflow", "evaluation", "pipeline"]
+              },
+              {
+                "title": "CI/CD Integration",
+                "content": "Integrate with CI/CD: run evaluations on every commit, set quality gates for deployment, track metrics over time, fail builds on regression, and generate reports for review. Use GitHub Actions, GitLab CI, or Jenkins. Parallelize evaluations for speed.",
+                "id": "doc_cicd_001",
+                "score": 0.94,
+                "tags": ["ci-cd", "automation", "integration"]
+              },
+              {
+                "title": "Progressive Deployment",
+                "content": "Deploy progressively: test with synthetic data first, validate on historical examples, canary release to subset, monitor early indicators, and full rollout after validation. Maintain rollback capability. Use feature flags for gradual adoption.",
+                "id": "doc_progressive_deploy_001",
+                "score": 0.90,
+                "tags": ["deployment", "progressive", "rollout"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "A recommended evaluation workflow: 1) **Development**: Use the playground for rapid prompt iteration, 2) **Testing**: Run evaluations locally with a subset of data for quick feedback, 3) **Validation**: Execute full evaluations on complete datasets before PR merge, 4) **CI/CD**: Automate evaluations on every commit with pass/fail thresholds, 5) **Staging**: Compare against production baseline with real-world data, 6) **Production**: Enable online evaluation for continuous monitoring, 7) **Iteration**: Use production feedback to update datasets and improve models."
+        },
+        {
+          "role": "user",
+          "content": "Can you explain the concept of golden datasets?"
+        },
+        {
+          "role": "assistant",
+          "content": "Let me search for information about golden datasets and their importance.",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"query\": \"Braintrust golden dataset test set curated examples best practices\"}",
+                "name": "bt-get-documents-rag"
+              },
+              "id": "call_010_3",
+              "type": "function"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "name": "bt-get-documents-rag",
+          "tool_call_id": "call_010_3",
+          "content": {
+            "documents": [
+              {
+                "title": "Golden Datasets Explained",
+                "content": "Golden datasets are curated test case collections representing: high-value customer scenarios, previously fixed failures, boundary conditions, edge cases, and critical features. Serve as regression test suite - all changes must pass. Keep small but comprehensive (50-200 examples). Update regularly with production failures. Primary quality gate for deployments.",
+                "id": "doc_golden_dataset_001",
+                "score": 0.98,
+                "tags": ["golden-dataset", "testing", "quality"]
+              },
+              {
+                "title": "Creating Golden Datasets",
+                "content": "Build golden datasets by: selecting representative examples, including challenging cases, balancing coverage and size, documenting example importance, and versioning carefully. Review and refresh periodically. Include both positive and negative cases. Annotate with expected behaviors.",
+                "id": "doc_create_golden_001",
+                "score": 0.94,
+                "tags": ["golden-dataset", "creation", "curation"]
+              },
+              {
+                "title": "Golden Dataset Management",
+                "content": "Manage golden datasets: track performance over time, investigate any failures immediately, expand with new edge cases, retire obsolete examples, and maintain high quality bar. Use as benchmark for model improvements. Share across teams for consistency.",
+                "id": "doc_golden_mgmt_001",
+                "score": 0.90,
+                "tags": ["golden-dataset", "management", "maintenance"]
+              }
+            ]
+          }
+        },
+        {
+          "role": "assistant",
+          "content": "Golden datasets in Braintrust are carefully curated collections of test cases that represent your most important use cases, edge cases, and known challenges. They should include: 1) High-value customer scenarios, 2) Previously failed cases that you've fixed, 3) Boundary conditions and edge cases, 4) Examples covering all major features. Golden datasets serve as your regression test suite - any change must pass these tests. Keep them small but comprehensive (typically 50-200 examples), regularly update them with production failures, and use them as the primary quality gate for deployments."
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "dataset_name": "BraintrustMultiTurnQA",
+    "description": "Multi-turn conversations about Braintrust features with document retrieval function calls and responses",
+    "version": "2.0",
+    "created_date": "2024-01-15",
+    "total_conversations": 10,
+    "total_turns": 90,
+    "function_call_format": "bt-get-documents-rag",
+    "includes_tool_responses": true
+  }
+}
