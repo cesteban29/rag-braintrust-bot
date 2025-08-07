@@ -1,8 +1,9 @@
 import os
 import json
-from braintrust import Eval, init_dataset, traced
+from braintrust import Eval, init_dataset, traced, wrap_openai
 from dotenv import load_dotenv
 import sys
+from openai import OpenAI
 
 # Add the src directory to the path so we can import from rag_braintrust_bot
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -11,393 +12,202 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 import logging
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
-from rag_braintrust_bot.rag_demo import client, rag_tool, SYSTEM_PROMPT
+from rag_braintrust_bot.rag_demo import rag_tool, SYSTEM_PROMPT
 from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
-import json
 
 # Load environment variables
 load_dotenv()
 
 project_name = os.getenv('BRAINTRUST_PROJECT_NAME', 'rag-braintrust-bot')
 
+# Create wrapped OpenAI client for automatic tracing
+client = wrap_openai(
+    OpenAI(
+        base_url="https://api.braintrust.dev/v1/proxy",
+        api_key=os.getenv('BRAINTRUST_API_KEY', '')
+    )
+)
+
 @traced
 def task(input, hooks):
     """
-    Run the RAG system with multi-turn conversation support.
-    Can work with either live RAG calls or pre-recorded conversations from dataset.
+    Run the RAG system with multi-turn conversation support using live LLM calls.
+    Follows the pattern of extracting input and chat_history from the dataset.
     
     Args:
-        input: Dictionary containing conversation turns or a single query
-        hooks: Braintrust hooks for logging metadata
+        input: Dictionary containing:
+            - input: The current user query (string) 
+            - chat_history: Previous conversation turns (list)
     
     Returns:
-        dict: The conversation history and final response
+        str: The assistant's response
     """
-    # Handle input format for multi-turn conversations
-    if isinstance(input, str):
-        # Single query - convert to single turn
-        turns = [{"role": "user", "content": input}]
-        use_live_rag = True
-    elif isinstance(input, dict):
-        if 'turns' in input:
-            # Multi-turn conversation format from dataset
-            turns = input['turns']
-            use_live_rag = False  # Use pre-recorded conversation
-        elif 'messages' in input:
-            # Alternative message format
-            turns = input['messages']
-            use_live_rag = True
-        else:
-            # Single query in dict format
-            query = input.get('query', input.get('input', ''))
-            turns = [{"role": "user", "content": query}]
-            use_live_rag = True
-    else:
-        turns = [{"role": "user", "content": str(input)}]
-        use_live_rag = True
-    
     try:
-        if use_live_rag:
-            # Live RAG evaluation - make actual LLM calls
-            result = _run_live_rag_conversation(turns, hooks)
+        # Handle different input formats from the dataset
+        if isinstance(input, list):
+            # Input is the full conversation from Braintrust dataset
+            # Find the last user message and use everything before it as chat history
+            user_input = ''
+            chat_history = []
+            
+            # Find the last user message index
+            last_user_idx = -1
+            for i in range(len(input) - 1, -1, -1):
+                if input[i].get('role') == 'user':
+                    last_user_idx = i
+                    user_input = input[i].get('content', '')
+                    break
+            
+            # Everything before the last user message is chat history
+            if last_user_idx > 0:
+                chat_history = input[:last_user_idx]
+            
+        elif isinstance(input, dict) and 'input' in input:
+            # Structured input with separate input and chat_history
+            user_input = input.get('input', '')
+            chat_history = input.get('chat_history', [])
+        elif isinstance(input, dict):
+            # Single dict that might be a message
+            user_input = input.get('content', '')
+            chat_history = []
         else:
-            # Pre-recorded conversation evaluation - use dataset conversation
-            result = _run_prerecorded_conversation(turns, hooks)
+            # Fallback for simple string input
+            user_input = str(input)
+            chat_history = []
         
-        # Return just the final response for Braintrust logging
-        return result.get("final_response", "")
+        hooks.metadata['user_input'] = user_input
+        hooks.metadata['chat_history_length'] = len(chat_history)
+        
+        # Build the conversation messages
+        messages = [
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT
+            }
+        ]
+        
+        # Add chat history, converting tool message content to strings if needed
+        for msg in chat_history:
+            if msg.get('role') == 'tool' and isinstance(msg.get('content'), dict):
+                # Tool messages need content as a JSON string
+                messages.append({
+                    **msg,
+                    'content': json.dumps(msg['content'])
+                })
+            else:
+                messages.append(msg)
+        
+        # Add current user input
+        messages.append({
+            "role": "user",
+            "content": user_input
+        })
+        
+        # Make the LLM call with tools (wrapOpenAI will automatically trace this)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=rag_tool,
+            tool_choice="auto"
+        )
+        
+        # Handle tool calls
+        all_retrieved_docs = []
+        if response.choices[0].message.tool_calls:
+            # Add the assistant's tool call message
+            messages.append(response.choices[0].message)
+            
+            # Process each tool call
+            for tool_call in response.choices[0].message.tool_calls:
+                if tool_call.function.name == "get_documents":
+                    # Parse arguments and call the RAG tool
+                    args = json.loads(tool_call.function.arguments)
+                    query_for_docs = args.get("query", "")
+                    
+                    # Call the RAG tool directly (this will be traced as a separate operation)
+                    rag_response = get_documents(query_for_docs)
+                    all_retrieved_docs.extend(rag_response["documents"])
+                    
+                    # Add tool response
+                    messages.append({
+                        "role": "tool",
+                        "name": "get_documents",
+                        "content": json.dumps(rag_response),
+                        "tool_call_id": tool_call.id
+                    })
+            
+            # Get final response after tool calls
+            final_response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=1000
+            )
+            
+            assistant_response = final_response.choices[0].message.content
+        else:
+            # No tool calls, use the original response
+            assistant_response = response.choices[0].message.content
+        
+        # Store metadata for scoring
+        hooks.metadata['retrieved_documents'] = all_retrieved_docs
+        hooks.metadata['tool_calls_made'] = len(response.choices[0].message.tool_calls) if response.choices[0].message.tool_calls else 0
+        
+        return assistant_response or ""
         
     except Exception as e:
-        print(f"Error in multi-turn task execution: {str(e)}")
+        print(f"Error in task execution: {str(e)}")
         hooks.metadata['error'] = str(e)
         return ""
 
-@traced
-def _run_live_rag_conversation(turns, hooks):
-    """Run live RAG conversation with actual LLM calls."""
-    # Initialize conversation with system prompt
-    messages = [
-        {
-            "role": "system",
-            "content": SYSTEM_PROMPT
-        }
-    ]
-    
-    # Store all retrieved documents across turns
-    all_retrieved_docs = []
-    conversation_history = []
-    
-    # Process each turn in the conversation
-    for turn_idx, turn in enumerate(turns):
-        if turn.get("role") == "user":
-            # Add user message
-            messages.append(turn)
-            conversation_history.append(turn)
-            
-            # Get response with tool calls
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=messages,
-                tools=rag_tool,
-                tool_choice="auto"
-            )
-            
-            # Handle tool calls for this turn
-            tool_responses = []
-            turn_retrieved_docs = []
-            
-            if response.choices[0].message.tool_calls:
-                for tool_call in response.choices[0].message.tool_calls:
-                    if tool_call.function.name == "get_documents":
-                        # Parse the query from the function arguments
-                        args = json.loads(tool_call.function.arguments)
-                        query_for_docs = args.get("query", "")
-                        
-                        # Call the RAG tool
-                        rag_response = get_documents(query_for_docs)
-                        
-                        # Store document info
-                        turn_retrieved_docs = rag_response["documents"]
-                        all_retrieved_docs.extend(turn_retrieved_docs)
-                        
-                        tool_responses.append({
-                            "role": "tool",
-                            "name": "get_documents",
-                            "content": json.dumps(rag_response),
-                            "tool_call_id": tool_call.id
-                        })
-            
-            # Add assistant's tool call message and tool responses
-            messages.append(response.choices[0].message)
-            
-            # Get final answer if we had tool calls
-            if tool_responses:
-                messages.extend(tool_responses)
-                
-                final_response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    max_tokens=1000
-                )
-                
-                assistant_message = {
-                    "role": "assistant",
-                    "content": final_response.choices[0].message.content
-                }
-            else:
-                # No tool calls, use the original response
-                assistant_message = {
-                    "role": "assistant",
-                    "content": response.choices[0].message.content
-                }
-            
-            # Add assistant response to messages and history
-            messages.append(assistant_message)
-            conversation_history.append(assistant_message)
-            
-            # Store turn metadata
-            hooks.metadata[f'turn_{turn_idx}_retrieved_docs'] = turn_retrieved_docs
-            hooks.metadata[f'turn_{turn_idx}_query'] = turn.get("content", "")
-        
-        elif turn.get("role") == "assistant":
-            # Pre-existing assistant message (for context)
-            messages.append(turn)
-            conversation_history.append(turn)
-    
-    # Store overall conversation metadata
-    hooks.metadata['all_retrieved_documents'] = all_retrieved_docs
-    hooks.metadata['conversation_history'] = conversation_history
-    hooks.metadata['turn_count'] = len([t for t in turns if t.get("role") == "user"])
-    
-    # Return the full conversation or just the last response
-    if len(conversation_history) > 0:
-        last_response = conversation_history[-1].get("content", "")
-    else:
-        last_response = ""
-    
-    return {
-        "final_response": last_response,
-        "conversation_history": conversation_history
-    }
+# Remove unused functions - we're now using live calls with the main task function
 
 def document_retrieval_check(input, output, metadata):
     """
-    Check if the correct documents were retrieved across all turns.
+    Check if documents were retrieved and assess their quality.
     
     Args:
-        input: The input conversation
+        input: The input data
         output: The generated response
-        metadata: Contains tool call information
+        metadata: Contains retrieved document information
     
     Returns:
         dict: Score and metadata about document retrieval accuracy
     """
-    # Extract all retrieved documents
-    all_retrieved_docs = metadata.get('all_retrieved_documents', [])
+    # Extract retrieved documents
+    retrieved_docs = metadata.get('retrieved_documents', [])
     
     # Check if we got any documents
-    if not all_retrieved_docs:
+    if not retrieved_docs:
         return {
             'score': 0,
             'name': 'document_retrieval_check',
             'metadata': {
                 'retrieved_docs': [],
-                'total_doc_count': 0,
-                'reasoning': 'No documents were retrieved in any turn'
+                'doc_count': 0,
+                'reasoning': 'No documents were retrieved'
             }
         }
     
     # Score based on document count and relevance scores
-    doc_count = len(all_retrieved_docs)
-    avg_score = sum(doc.get('score', 0) for doc in all_retrieved_docs) / doc_count if doc_count > 0 else 0
+    doc_count = len(retrieved_docs)
+    avg_score = sum(doc.get('score', 0) for doc in retrieved_docs) / doc_count if doc_count > 0 else 0
     
-    # Check document diversity (unique documents)
-    unique_docs = len(set(doc.get('id', doc.get('content', '')[:50]) for doc in all_retrieved_docs))
-    diversity_score = unique_docs / doc_count if doc_count > 0 else 0
-    
-    # Combine metrics
-    count_score = min(doc_count / 5, 1.0)  # Normalize to 1 for 5+ docs across conversation
-    final_score = (count_score * 0.3) + (avg_score * 0.5) + (diversity_score * 0.2)
+    # Combine document count (normalized) and average relevance score
+    count_score = min(doc_count / 3, 1.0)  # Normalize to 1 for 3+ docs
+    final_score = (count_score * 0.3) + (avg_score * 0.7)
     
     return {
         'score': final_score,
         'name': 'document_retrieval_check',
         'metadata': {
-            'total_doc_count': doc_count,
-            'unique_doc_count': unique_docs,
+            'retrieved_docs': retrieved_docs,
+            'doc_count': doc_count,
             'avg_relevance_score': avg_score,
-            'diversity_score': diversity_score,
-            'reasoning': f'Retrieved {doc_count} documents ({unique_docs} unique) with avg relevance {avg_score:.3f}'
+            'reasoning': f'Retrieved {doc_count} documents with avg relevance {avg_score:.3f}'
         }
     }
 
-def conversation_coherence_check(input, output, metadata):
-    """
-    Check if the conversation maintains coherence across turns.
-    
-    Args:
-        input: The input conversation
-        output: The generated response
-        metadata: Contains conversation history
-    
-    Returns:
-        dict: Score and metadata about conversation coherence
-    """
-    conversation_history = metadata.get('conversation_history', [])
-    
-    if len(conversation_history) < 2:
-        return {
-            'score': 1.0,  # Single turn is inherently coherent
-            'name': 'conversation_coherence_check',
-            'metadata': {
-                'reasoning': 'Single turn conversation - coherence not applicable'
-            }
-        }
-    
-    score = 0
-    checks = {}
-    
-    # Check for topic consistency
-    all_messages = ' '.join([msg.get('content', '') for msg in conversation_history])
-    
-    # Extract key terms from first user message
-    first_user_msg = next((msg for msg in conversation_history if msg.get('role') == 'user'), {})
-    first_content = first_user_msg.get('content', '').lower()
-    
-    # Simple keyword tracking for topic consistency
-    key_terms = set(first_content.split()) - {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'what', 'how', 'when', 'where', 'why', 'who'}
-    
-    # Check if key terms appear in subsequent responses
-    subsequent_messages = conversation_history[2:]  # Skip first user and assistant messages
-    if subsequent_messages and key_terms:
-        term_continuity = 0
-        for msg in subsequent_messages:
-            content = msg.get('content', '').lower()
-            matching_terms = sum(1 for term in key_terms if term in content)
-            term_continuity += matching_terms / len(key_terms) if key_terms else 0
-        
-        topic_consistency_score = min(term_continuity / len(subsequent_messages), 1.0) if subsequent_messages else 1.0
-        score += topic_consistency_score * 0.4
-        checks['topic_consistency'] = topic_consistency_score > 0.3
-    else:
-        score += 0.4
-        checks['topic_consistency'] = True
-    
-    # Check for proper turn-taking (user-assistant alternation)
-    proper_alternation = True
-    expected_role = 'user'
-    for msg in conversation_history:
-        if msg.get('role') not in ['user', 'assistant']:
-            continue
-        if msg.get('role') != expected_role:
-            proper_alternation = False
-            break
-        expected_role = 'assistant' if expected_role == 'user' else 'user'
-    
-    if proper_alternation:
-        score += 0.3
-        checks['proper_turn_taking'] = True
-    else:
-        checks['proper_turn_taking'] = False
-    
-    # Check response length consistency
-    assistant_responses = [msg for msg in conversation_history if msg.get('role') == 'assistant']
-    if len(assistant_responses) > 1:
-        lengths = [len(msg.get('content', '')) for msg in assistant_responses]
-        avg_length = sum(lengths) / len(lengths)
-        length_variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
-        
-        # Lower variance is better (more consistent)
-        consistency_score = 1.0 / (1.0 + (length_variance / (avg_length ** 2) if avg_length > 0 else 1))
-        score += consistency_score * 0.3
-        checks['response_length_consistency'] = consistency_score > 0.5
-    else:
-        score += 0.3
-        checks['response_length_consistency'] = True
-    
-    return {
-        'score': score,
-        'name': 'conversation_coherence_check',
-        'metadata': {
-            'checks': checks,
-            'turn_count': metadata.get('turn_count', 0),
-            'reasoning': f'Passed {sum(checks.values())}/{len(checks)} coherence checks'
-        }
-    }
-
-def context_retention_check(input, output, metadata):
-    """
-    Check if the system retains and uses context from previous turns.
-    
-    Args:
-        input: The input conversation
-        output: The generated response
-        metadata: Contains conversation history
-    
-    Returns:
-        dict: Score and metadata about context retention
-    """
-    conversation_history = metadata.get('conversation_history', [])
-    
-    if len(conversation_history) < 4:  # Need at least 2 full exchanges
-        return {
-            'score': 1.0,
-            'name': 'context_retention_check',
-            'metadata': {
-                'reasoning': 'Not enough turns to evaluate context retention'
-            }
-        }
-    
-    score = 0
-    checks = {}
-    
-    # Check if later responses reference earlier content
-    early_messages = conversation_history[:len(conversation_history)//2]
-    later_messages = conversation_history[len(conversation_history)//2:]
-    
-    # Extract meaningful content words from early messages
-    early_content = ' '.join([msg.get('content', '') for msg in early_messages]).lower()
-    early_words = set(early_content.split()) - {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'what', 'how', 'when', 'where', 'why', 'who', 'i', 'you', 'it', 'this', 'that', 'these', 'those'}
-    
-    # Check how many early concepts appear in later messages
-    later_content = ' '.join([msg.get('content', '') for msg in later_messages if msg.get('role') == 'assistant']).lower()
-    
-    if early_words and later_content:
-        retained_words = sum(1 for word in early_words if word in later_content)
-        retention_rate = retained_words / len(early_words)
-        score += min(retention_rate * 2, 1.0) * 0.5  # Scale up since not all words need to be retained
-        checks['references_earlier_content'] = retention_rate > 0.1
-    else:
-        checks['references_earlier_content'] = False
-    
-    # Check if responses build upon previous information
-    assistant_messages = [msg for msg in conversation_history if msg.get('role') == 'assistant']
-    if len(assistant_messages) > 1:
-        # Check for progressive elaboration (responses getting more specific)
-        has_progression = False
-        for i in range(1, len(assistant_messages)):
-            prev_msg = assistant_messages[i-1].get('content', '')
-            curr_msg = assistant_messages[i].get('content', '')
-            
-            # Simple check: does current message reference or expand on previous?
-            if any(phrase in curr_msg.lower() for phrase in ['as mentioned', 'previously', 'earlier', 'before', 'already', 'addition', 'furthermore', 'also']):
-                has_progression = True
-                break
-        
-        if has_progression:
-            score += 0.5
-            checks['progressive_elaboration'] = True
-        else:
-            checks['progressive_elaboration'] = False
-    
-    return {
-        'score': score,
-        'name': 'context_retention_check',
-        'metadata': {
-            'checks': checks,
-            'reasoning': f'System demonstrates {"good" if score > 0.5 else "limited"} context retention across turns'
-        }
-    }
+# Simplified scoring functions for single-turn with chat history context
 
 def answer_relevance_check(input, output, metadata):
     """
@@ -710,7 +520,46 @@ def _run_prerecorded_conversation(turns, hooks):
         "conversation_history": conversation_history
     }
 
-# Run the evaluation
+def load_multiturn_conversations():
+    """
+    Load multi-turn conversations from the JSON dataset.
+    Returns the conversations as-is for direct evaluation.
+    """
+    dataset_path = os.path.join(os.path.dirname(__file__), 'datasets', 'braintrust_multiturn_qa_conversations.json')
+    
+    with open(dataset_path, 'r') as f:
+        conversations = json.load(f)
+    
+    # Transform each conversation into individual evaluation cases
+    eval_cases = []
+    
+    for conversation in conversations:
+        turns = conversation.get('turns', [])
+        chat_history = []
+        
+        for i, turn in enumerate(turns):
+            if turn.get('role') == 'user':
+                # Create evaluation case for this user turn
+                eval_case = {
+                    'input': {
+                        'input': turn.get('content', ''),
+                        'chat_history': chat_history.copy()
+                    },
+                    'expected': None,
+                    'metadata': {
+                        'conversation_id': conversation.get('id'),
+                        'turn_index': i,
+                        'description': conversation.get('description', '')
+                    }
+                }
+                eval_cases.append(eval_case)
+            
+            # Add this turn to chat history
+            chat_history.append(turn)
+    
+    return eval_cases
+
+# Run the evaluation with the Braintrust dataset
 Eval(
     project_name,
     task=task,
@@ -719,8 +568,6 @@ Eval(
         document_retrieval_check,
         answer_relevance_check,
         answer_faithfulness_check,
-        response_structure_check,
-        conversation_coherence_check,
-        context_retention_check
+        response_structure_check
     ]
 )
