@@ -21,7 +21,7 @@ load_dotenv()
 
 project_name = os.getenv('BRAINTRUST_PROJECT_NAME', 'rag-braintrust-bot')
 
-def task(input_data, hooks):
+def task(input, hooks):
     """
     Run the RAG system and gather results for evaluation.
     
@@ -33,12 +33,12 @@ def task(input_data, hooks):
         str: The final response from the RAG system
     """
     # Handle both string and dictionary input formats
-    if isinstance(input_data, str):
-        query = input_data
-    elif isinstance(input_data, dict):
-        query = input_data.get('query', input_data.get('input', ''))
+    if isinstance(input, str):
+        query = input
+    elif isinstance(input, dict):
+        query = input.get('query', input.get('input', ''))
     else:
-        query = str(input_data)
+        query = str(input)
     
     try:
         # RAG components are now imported at module level for better performance
@@ -113,7 +113,7 @@ def task(input_data, hooks):
         hooks.metadata['error'] = str(e)
         return ""
 
-def document_retrieval_check(output, expected, input_data, metadata):
+def document_retrieval_check( input, output, metadata):
     """
     Check if the correct documents were retrieved for the query.
     
@@ -160,7 +160,7 @@ def document_retrieval_check(output, expected, input_data, metadata):
         }
     }
 
-def answer_relevance_check(output, expected, input_data, metadata):
+def answer_relevance_check(input, output, metadata):
     """
     Check if the generated answer is relevant to the input query.
     Uses a simple heuristic based on keyword overlap and length.
@@ -175,12 +175,12 @@ def answer_relevance_check(output, expected, input_data, metadata):
         dict: Score and metadata about answer relevance
     """
     # Handle both string and dictionary input formats
-    if isinstance(input_data, str):
-        query = input_data
-    elif isinstance(input_data, dict):
-        query = input_data.get('query', input_data.get('input', ''))
+    if isinstance(input, str):
+        query = input
+    elif isinstance(input, dict):
+        query = input.get('query', input.get('input', ''))
     else:
-        query = str(input_data)
+        query = str(input)
     
     if not output or not query:
         return {
@@ -224,7 +224,7 @@ def answer_relevance_check(output, expected, input_data, metadata):
         }
     }
 
-def answer_faithfulness_check(output, expected, input_data, metadata):
+def answer_faithfulness_check(input, output, metadata):
     """
     Check if the answer is faithful to the retrieved documents.
     
@@ -290,7 +290,7 @@ def answer_faithfulness_check(output, expected, input_data, metadata):
         }
     }
 
-def response_structure_check(output, expected, input_data, metadata):
+def response_structure_check(input, output, metadata):
     """
     Check if the response follows good documentation answer structure.
     
