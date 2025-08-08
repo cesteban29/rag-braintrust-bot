@@ -419,9 +419,11 @@ def process_multi_turn_conversation(conversation_queries: List[str]) -> str:
                 
                 # Convert ChatCompletionMessage to dict format for consistent handling
                 assistant_message = response.choices[0].message
-                messages.append({
+                assistant_content = getattr(assistant_message, 'content', '') or ''
+                
+                # For tool calls, content can be None/empty, so we need to handle this properly
+                assistant_msg = {
                     "role": getattr(assistant_message, 'role', 'assistant'),
-                    "content": getattr(assistant_message, 'content', ''),
                     "tool_calls": [
                         {
                             "id": tc.id,
@@ -432,7 +434,13 @@ def process_multi_turn_conversation(conversation_queries: List[str]) -> str:
                             }
                         } for tc in assistant_message.tool_calls
                     ]
-                })
+                }
+                
+                # Only add content if it's not empty (OpenAI allows empty content for tool calls)
+                if assistant_content:
+                    assistant_msg["content"] = assistant_content
+                
+                messages.append(assistant_msg)
                 
                 # Add tool response
                 messages.append({
@@ -447,16 +455,23 @@ def process_multi_turn_conversation(conversation_queries: List[str]) -> str:
                     messages=messages,
                     max_tokens=1000
                 )
-                assistant_response = final_response.choices[0].message.content
+                assistant_response = getattr(final_response.choices[0].message, 'content', '') or ''
             else:
                 # No tool calls - use the original response
-                assistant_response = response.choices[0].message.content
+                assistant_response = getattr(response.choices[0].message, 'content', '') or ''
             
-            # Add assistant's response to conversation
-            messages.append({
-                "role": "assistant",
-                "content": assistant_response
-            })
+            # Add assistant's response to conversation (only if not empty)
+            if assistant_response and assistant_response.strip():
+                messages.append({
+                    "role": "assistant",
+                    "content": assistant_response
+                })
+            else:
+                # If assistant response is empty, add a fallback message
+                messages.append({
+                    "role": "assistant", 
+                    "content": "I apologize, but I couldn't generate a response for that query."
+                })
         
         # Log metadata for online scorers
         current_span().log(
