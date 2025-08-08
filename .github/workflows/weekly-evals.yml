@@ -56,17 +56,6 @@ jobs:
         VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
         INDEX_NAME: ${{ vars.INDEX_NAME }}
     
-    - name: Upload Braintrust results
-      uses: braintrustdata/eval-action@v1
-      with:
-        api_key: ${{ secrets.BRAINTRUST_API_KEY }}
-        runtime: python
-      env:
-        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
-        BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
-        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
-        INDEX_NAME: ${{ vars.INDEX_NAME }}
 
   eval-multiturn:
     name: Run Multi-turn Conversation Evaluation
@@ -96,17 +85,6 @@ jobs:
         VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
         INDEX_NAME: ${{ vars.INDEX_NAME }}
     
-    - name: Upload Braintrust results
-      uses: braintrustdata/eval-action@v1
-      with:
-        api_key: ${{ secrets.BRAINTRUST_API_KEY }}
-        runtime: python
-      env:
-        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
-        BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
-        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
-        INDEX_NAME: ${{ vars.INDEX_NAME }}
 
   summary:
     name: Evaluation Summary

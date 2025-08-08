@@ -14,12 +14,12 @@ authors = [
 license = {text = "MIT"}
 dependencies = [
     "autoevals>=0.0.127",
-    "beautifulsoup4>=4.13.4",
-    "braintrust",
-    "jsonpath>=0.82.2",
-    "pinecone[grpc]>=6.0.2",
-    "voyageai>=0.3.2",
-    "openai>=1.0.0,<1.50.0",
+    "beautifulsoup4>=4.13.0",
+    "braintrust>=0.2.0",
+    "jsonpath>=0.82.0",
+    "pinecone[grpc]>=6.0.0",
+    "voyageai>=0.3.0",
+    "openai>=1.40.0,<2.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
