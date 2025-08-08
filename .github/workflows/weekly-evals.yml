@@ -1,0 +1,94 @@
+name: Weekly RAG Evaluations
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual trigger for testing
+  pull_request:  # Also run on PRs for continuous testing
+    paths:
+      - 'src/**'
+      - 'evals/**'
+      - '.github/workflows/weekly-evals.yml'
+
+jobs:
+  eval-basic:
+    name: Run Basic RAG Evaluation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Basic Evaluation with Braintrust
+      uses: braintrustdata/eval-action@v1
+      with:
+        api-key: ${{ secrets.BRAINTRUST_API_KEY }}
+        runtime: python
+        command: python evals/eval_basic.py
+        project: rag-braintrust-bot
+        comment-on-pr: true  # Add evaluation results as PR comment
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+
+  eval-multiturn:
+    name: Run Multi-turn Conversation Evaluation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Multi-turn Evaluation with Braintrust
+      uses: braintrustdata/eval-action@v1
+      with:
+        api-key: ${{ secrets.BRAINTRUST_API_KEY }}
+        runtime: python
+        command: python evals/eval_multiturn.py
+        project: rag-braintrust-bot
+        comment-on-pr: true  # Add evaluation results as PR comment
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+
+  summary:
+    name: Evaluation Summary
+    needs: [eval-basic, eval-multiturn]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Create summary
+      run: |
+        echo "## 📊 Weekly RAG Evaluation Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "**Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Evaluations Completed:" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Basic RAG Evaluation" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Multi-turn Conversation Evaluation" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### View Results:" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [Braintrust Dashboard](https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The Braintrust Action automatically tracks experiments and provides detailed metrics." >> $GITHUB_STEP_SUMMARY
