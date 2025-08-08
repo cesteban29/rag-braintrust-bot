@@ -115,7 +115,7 @@ jobs:
         import os
         import json
         import requests
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         # Get recent experiments (last 24 hours)
         headers = {
@@ -137,7 +137,7 @@ jobs:
             experiments = response.json()["objects"]
             
             # Filter experiments from this run (last hour)
-            recent_time = datetime.now() - timedelta(hours=1)
+            recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
             recent_experiments = [
                 exp for exp in experiments 
                 if datetime.fromisoformat(exp["created"].replace("Z", "+00:00")) > recent_time
@@ -145,7 +145,7 @@ jobs:
             
             if recent_experiments:
                 comment_body = "## 🧠 Braintrust Evaluation Results\n\n"
-                comment_body += f"**Run Date:** {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}\n"
+                comment_body += f"**Run Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
                 comment_body += f"**Experiments:** {len(recent_experiments)}\n\n"
                 
                 for exp in recent_experiments:
