@@ -154,7 +154,6 @@ def rag_f1(input, output, expected, metadata):
     return 2 * (precision * recall) / (precision + recall)
 
 # RAG Precision Scorer
-print("Creating rag_precision scorer...")
 project.scorers.create(
     name="RAG Precision",
     slug="rag-precision", 
