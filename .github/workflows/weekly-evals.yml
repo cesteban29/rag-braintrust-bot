@@ -87,24 +87,115 @@ jobs:
     
 
   summary:
-    name: Evaluation Summary
+    name: Post Evaluation Summary
     needs: [eval-basic, eval-multiturn]
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && github.event_name == 'pull_request'
     
     steps:
-    - name: Create summary
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install Braintrust CLI
       run: |
-        echo "## 📊 Weekly RAG Evaluation Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
-        echo "**Run:** #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Evaluations Completed:" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Basic RAG Evaluation" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Multi-turn Conversation Evaluation" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### View Results:" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [Braintrust Dashboard](https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "The Braintrust Action automatically tracks experiments and provides detailed metrics." >> $GITHUB_STEP_SUMMARY
+        pip install braintrust
+    
+    - name: Generate and Post Evaluation Summary
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Get the latest experiments from Braintrust
+        python3 << 'EOF'
+        import os
+        import json
+        import requests
+        from datetime import datetime, timedelta
+        
+        # Get recent experiments (last 24 hours)
+        headers = {
+            "Authorization": f"Bearer {os.getenv('BRAINTRUST_API_KEY')}",
+            "Content-Type": "application/json"
+        }
+        
+        # Fetch recent experiments
+        response = requests.get(
+            "https://api.braintrust.dev/v1/experiment",
+            headers=headers,
+            params={
+                "project_name": "rag-braintrust-bot",
+                "limit": 10
+            }
+        )
+        
+        if response.status_code == 200:
+            experiments = response.json()["objects"]
+            
+            # Filter experiments from this run (last hour)
+            recent_time = datetime.now() - timedelta(hours=1)
+            recent_experiments = [
+                exp for exp in experiments 
+                if datetime.fromisoformat(exp["created"].replace("Z", "+00:00")) > recent_time
+            ]
+            
+            if recent_experiments:
+                comment_body = "## 🧠 Braintrust Evaluation Results\n\n"
+                comment_body += f"**Run Date:** {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}\n"
+                comment_body += f"**Experiments:** {len(recent_experiments)}\n\n"
+                
+                for exp in recent_experiments:
+                    name = exp.get("name", "Unknown")
+                    scores = exp.get("scores", {})
+                    
+                    comment_body += f"### 📊 {name}\n"
+                    
+                    if scores:
+                        comment_body += "| Metric | Score | Change |\n"
+                        comment_body += "|--------|-------|--------|\n"
+                        
+                        for metric, value in scores.items():
+                            if isinstance(value, (int, float)):
+                                score_str = f"{value:.2%}" if 0 <= value <= 1 else f"{value:.3f}"
+                            else:
+                                score_str = str(value)
+                            comment_body += f"| {metric} | {score_str} | - |\n"
+                    else:
+                        comment_body += "_No scores available_\n"
+                    
+                    # Add experiment link
+                    exp_url = f"https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot/experiments/{exp.get('id', '')}"
+                    comment_body += f"🔗 [View Experiment]({exp_url})\n\n"
+                
+                comment_body += "---\n"
+                comment_body += "💡 **View all results:** [Braintrust Dashboard](https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot)\n"
+                
+                # Post as PR comment
+                pr_number = os.getenv('GITHUB_REF_NAME').split('/')[0] if 'pull' in os.getenv('GITHUB_REF', '') else None
+                if pr_number:
+                    github_token = os.getenv('GITHUB_TOKEN')
+                    repo = os.getenv('GITHUB_REPOSITORY')
+                    
+                    comment_data = {"body": comment_body}
+                    comment_response = requests.post(
+                        f"https://api.github.com/repos/{repo}/issues/{pr_number}/comments",
+                        headers={
+                            "Authorization": f"token {github_token}",
+                            "Content-Type": "application/json"
+                        },
+                        json=comment_data
+                    )
+                    
+                    if comment_response.status_code == 201:
+                        print("✅ Posted evaluation summary to PR")
+                    else:
+                        print(f"❌ Failed to post comment: {comment_response.status_code}")
+            else:
+                print("No recent experiments found")
+        else:
+            print(f"Failed to fetch experiments: {response.status_code}")
+        EOF
