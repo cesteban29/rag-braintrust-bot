@@ -20,6 +20,7 @@ dependencies = [
     "pinecone[grpc]>=6.0.0",
     "voyageai>=0.3.0",
     "openai>=1.40.0,<2.0.0",
+    "pytz>=2025.2",
 ]
 
 [tool.hatch.build.targets.wheel]
