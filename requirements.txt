@@ -10,23 +10,29 @@ aiosignal==1.3.2
     # via aiohttp
 annotated-types==0.7.0
     # via pydantic
+anyio==4.10.0
+    # via
+    #   httpx
+    #   openai
 attrs==25.3.0
     # via
     #   aiohttp
     #   jsonschema
     #   referencing
 autoevals==0.0.127
-    # via life-sciences-rag (pyproject.toml)
+    # via rag-braintrust-bot (pyproject.toml)
 beautifulsoup4==4.13.4
-    # via life-sciences-rag (pyproject.toml)
+    # via rag-braintrust-bot (pyproject.toml)
 braintrust==0.0.201
-    # via life-sciences-rag (pyproject.toml)
+    # via rag-braintrust-bot (pyproject.toml)
 braintrust-core==0.0.58
     # via
     #   autoevals
     #   braintrust
 certifi==2025.4.26
     # via
+    #   httpcore
+    #   httpx
     #   pinecone
     #   requests
 charset-normalizer==3.4.1
@@ -35,6 +41,8 @@ chevron==0.14.0
     # via
     #   autoevals
     #   braintrust
+distro==1.9.0
+    # via openai
 exceptiongroup==1.2.2
     # via braintrust
 filelock==3.18.0
@@ -55,16 +63,40 @@ googleapis-common-protos==1.70.0
     #   protoc-gen-openapiv2
 grpcio==1.71.0
     # via pinecone
+h11==0.16.0
+    # via httpcore
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via
+    #   langsmith
+    #   openai
 huggingface-hub==0.30.2
     # via tokenizers
 idna==3.10
     # via
+    #   anyio
+    #   httpx
     #   requests
     #   yarl
+jiter==0.10.0
+    # via openai
+jsonpatch==1.33
+    # via langchain-core
+jsonpath==0.82.2
+    # via rag-braintrust-bot (pyproject.toml)
+jsonpointer==3.0.0
+    # via jsonpatch
 jsonschema==4.23.0
     # via autoevals
 jsonschema-specifications==2025.4.1
     # via jsonschema
+langchain-core==0.3.74
+    # via langchain-text-splitters
+langchain-text-splitters==0.3.9
+    # via voyageai
+langsmith==0.4.13
+    # via langchain-core
 lz4==4.4.4
     # via pinecone
 multidict==6.4.3
@@ -73,12 +105,19 @@ multidict==6.4.3
     #   yarl
 numpy==2.2.5
     # via voyageai
+openai==1.99.3
+    # via rag-braintrust-bot (pyproject.toml)
+orjson==3.11.1
+    # via langsmith
 packaging==25.0
-    # via huggingface-hub
+    # via
+    #   huggingface-hub
+    #   langchain-core
+    #   langsmith
 pillow==11.2.1
     # via voyageai
 pinecone==6.0.2
-    # via life-sciences-rag (pyproject.toml)
+    # via rag-braintrust-bot (pyproject.toml)
 pinecone-plugin-interface==0.0.7
     # via pinecone
 polyleven==0.9.0
@@ -95,7 +134,11 @@ protobuf==5.29.4
 protoc-gen-openapiv2==0.0.1
     # via pinecone
 pydantic==2.11.4
-    # via voyageai
+    # via
+    #   langchain-core
+    #   langsmith
+    #   openai
+    #   voyageai
 pydantic-core==2.33.2
     # via pydantic
 python-dateutil==2.9.0.post0
@@ -108,6 +151,7 @@ pyyaml==6.0.2
     # via
     #   autoevals
     #   huggingface-hub
+    #   langchain-core
 referencing==0.36.2
     # via
     #   jsonschema
@@ -116,7 +160,11 @@ requests==2.32.3
     # via
     #   braintrust
     #   huggingface-hub
+    #   langsmith
+    #   requests-toolbelt
     #   voyageai
+requests-toolbelt==1.0.0
+    # via langsmith
 rpds-py==0.24.0
     # via
     #   jsonschema
@@ -125,12 +173,18 @@ six==1.17.0
     # via python-dateutil
 smmap==5.0.2
     # via gitdb
+sniffio==1.3.1
+    # via
+    #   anyio
+    #   openai
 soupsieve==2.7
     # via beautifulsoup4
 sseclient-py==1.8.0
     # via braintrust
 tenacity==9.1.2
-    # via voyageai
+    # via
+    #   langchain-core
+    #   voyageai
 text-unidecode==1.3
     # via python-slugify
 tokenizers==0.21.1
@@ -139,15 +193,17 @@ tqdm==4.67.1
     # via
     #   braintrust
     #   huggingface-hub
+    #   openai
 typing-extensions==4.13.2
     # via
     #   beautifulsoup4
     #   braintrust
     #   huggingface-hub
+    #   langchain-core
+    #   openai
     #   pinecone
     #   pydantic
     #   pydantic-core
-    #   referencing
     #   typing-inspection
 typing-inspection==0.4.0
     # via pydantic
@@ -155,7 +211,9 @@ urllib3==2.4.0
     # via
     #   pinecone
     #   requests
-voyageai==0.2.4
-    # via life-sciences-rag (pyproject.toml)
+voyageai==0.3.4
+    # via rag-braintrust-bot (pyproject.toml)
 yarl==1.20.0
     # via aiohttp
+zstandard==0.23.0
+    # via langsmith
