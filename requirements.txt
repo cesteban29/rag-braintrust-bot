@@ -23,12 +23,10 @@ autoevals==0.0.127
     # via rag-braintrust-bot (pyproject.toml)
 beautifulsoup4==4.13.4
     # via rag-braintrust-bot (pyproject.toml)
-braintrust==0.0.201
+braintrust==0.2.1
     # via rag-braintrust-bot (pyproject.toml)
 braintrust-core==0.0.58
-    # via
-    #   autoevals
-    #   braintrust
+    # via autoevals
 certifi==2025.4.26
     # via
     #   httpcore
