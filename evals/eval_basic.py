@@ -5,6 +5,7 @@ from braintrust import Eval, init_dataset, traced, wrap_openai
 from dotenv import load_dotenv
 import sys
 from openai import OpenAI
+import pytz
 
 # Add the src directory to the path so we can import from rag_braintrust_bot
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -190,7 +191,7 @@ for model_name in MODELS_TO_EVALUATE:
                 rag_recall,
                 rag_f1
             ],
-            experiment_name=f"basic_{model_name}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
+            experiment_name=f"basic_{model_name}_{datetime.datetime.now(pytz.timezone('US/Pacific')).strftime('%Y-%m-%d_%H-%M-%S')}",
         )
     except Exception as e:
         print(f"\nError running evaluation for {model_name}: {str(e)}")

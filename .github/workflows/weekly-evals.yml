@@ -136,6 +136,11 @@ jobs:
         if response.status_code == 200:
             experiments = response.json()["objects"]
             
+            # Debug: Print first experiment structure
+            if experiments:
+                print(f"Debug: First experiment keys: {list(experiments[0].keys())}")
+                print(f"Debug: First experiment: {experiments[0]}")
+            
             # Filter experiments from this run (last hour)
             recent_time = datetime.now(timezone.utc) - timedelta(hours=1)
             recent_experiments = [
@@ -151,6 +156,7 @@ jobs:
                 for exp in recent_experiments:
                     name = exp.get("name", "Unknown")
                     scores = exp.get("scores", {})
+                    exp_id = exp.get("id", "")
                     
                     comment_body += f"### 📊 {name}\n"
                     
@@ -167,9 +173,12 @@ jobs:
                     else:
                         comment_body += "_No scores available_\n"
                     
-                    # Add experiment link
-                    exp_url = f"https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot/experiments/{exp.get('id', '')}"
-                    comment_body += f"🔗 [View Experiment]({exp_url})\n\n"
+                    # Add experiment link only if ID exists
+                    if exp_id:
+                        exp_url = f"https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot/experiments/{exp_id}"
+                        comment_body += f"🔗 [View Experiment]({exp_url})\n\n"
+                    else:
+                        comment_body += "_Experiment ID not available_\n\n"
                 
                 comment_body += "---\n"
                 comment_body += "💡 **View all results:** [Braintrust Dashboard](https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot)\n"
@@ -209,4 +218,5 @@ jobs:
                 print("No recent experiments found")
         else:
             print(f"Failed to fetch experiments: {response.status_code}")
+            print(f"Response: {response.text}")
         EOF
