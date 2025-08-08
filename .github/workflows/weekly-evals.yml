@@ -47,14 +47,20 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Run Basic Evaluation with Braintrust
+    - name: Run Basic Evaluation
+      run: python evals/eval_basic.py
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
+        INDEX_NAME: ${{ vars.INDEX_NAME }}
+    
+    - name: Upload Braintrust results
       uses: braintrustdata/eval-action@v1
       with:
-        api-key: ${{ secrets.BRAINTRUST_API_KEY }}
+        api_key: ${{ secrets.BRAINTRUST_API_KEY }}
         runtime: python
-        command: python evals/eval_basic.py
-        project: rag-braintrust-bot
-        comment-on-pr: true  # Add evaluation results as PR comment
       env:
         BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
         BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
@@ -81,14 +87,20 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Run Multi-turn Evaluation with Braintrust
+    - name: Run Multi-turn Evaluation
+      run: python evals/eval_multiturn.py
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
+        INDEX_NAME: ${{ vars.INDEX_NAME }}
+    
+    - name: Upload Braintrust results
       uses: braintrustdata/eval-action@v1
       with:
-        api-key: ${{ secrets.BRAINTRUST_API_KEY }}
+        api_key: ${{ secrets.BRAINTRUST_API_KEY }}
         runtime: python
-        command: python evals/eval_multiturn.py
-        project: rag-braintrust-bot
-        comment-on-pr: true  # Add evaluation results as PR comment
       env:
         BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
         BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
