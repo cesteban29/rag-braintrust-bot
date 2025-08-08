@@ -90,7 +90,7 @@ jobs:
     name: Post Evaluation Summary
     needs: [eval-basic, eval-multiturn]
     runs-on: ubuntu-latest
-    if: always() && github.event_name == 'pull_request'
+    if: always()
     
     steps:
     - name: Checkout repository
@@ -174,9 +174,15 @@ jobs:
                 comment_body += "---\n"
                 comment_body += "💡 **View all results:** [Braintrust Dashboard](https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot)\n"
                 
-                # Post as PR comment
-                pr_number = os.getenv('GITHUB_REF_NAME').split('/')[0] if 'pull' in os.getenv('GITHUB_REF', '') else None
-                if pr_number:
+                # Post as PR comment (only for pull requests)
+                event_name = os.getenv('GITHUB_EVENT_NAME', '')
+                if event_name == 'pull_request':
+                    pr_number = os.getenv('GITHUB_EVENT_PATH', '')
+                    if pr_number:
+                        import json
+                        with open(pr_number, 'r') as f:
+                            event_data = json.load(f)
+                        pr_number = event_data.get('pull_request', {}).get('number')
                     github_token = os.getenv('GITHUB_TOKEN')
                     repo = os.getenv('GITHUB_REPOSITORY')
                     
@@ -194,6 +200,11 @@ jobs:
                         print("✅ Posted evaluation summary to PR")
                     else:
                         print(f"❌ Failed to post comment: {comment_response.status_code}")
+                else:
+                    # For non-PR events, output to GitHub Actions summary
+                    with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
+                        f.write(comment_body)
+                    print("✅ Added evaluation summary to GitHub Actions summary")
             else:
                 print("No recent experiments found")
         else:
