@@ -23,6 +23,12 @@ autoevals==0.0.127
     # via rag-braintrust-bot (pyproject.toml)
 beautifulsoup4==4.13.4
     # via rag-braintrust-bot (pyproject.toml)
+boto3==1.40.6
+    # via braintrust
+botocore==1.40.6
+    # via
+    #   boto3
+    #   s3transfer
 braintrust==0.2.1
     # via rag-braintrust-bot (pyproject.toml)
 braintrust-core==0.0.58
@@ -79,6 +85,10 @@ idna==3.10
     #   yarl
 jiter==0.10.0
     # via openai
+jmespath==1.0.1
+    # via
+    #   boto3
+    #   botocore
 jsonpatch==1.33
     # via langchain-core
 jsonpath==0.82.2
@@ -131,6 +141,8 @@ protobuf==5.29.4
     #   protoc-gen-openapiv2
 protoc-gen-openapiv2==0.0.1
     # via pinecone
+psycopg2-binary==2.9.10
+    # via braintrust
 pydantic==2.11.4
     # via
     #   langchain-core
@@ -140,7 +152,9 @@ pydantic==2.11.4
 pydantic-core==2.33.2
     # via pydantic
 python-dateutil==2.9.0.post0
-    # via pinecone
+    # via
+    #   botocore
+    #   pinecone
 python-dotenv==1.1.0
     # via braintrust
 python-slugify==8.0.4
@@ -169,6 +183,8 @@ rpds-py==0.24.0
     # via
     #   jsonschema
     #   referencing
+s3transfer==0.13.1
+    # via boto3
 six==1.17.0
     # via python-dateutil
 smmap==5.0.2
@@ -209,8 +225,11 @@ typing-inspection==0.4.0
     # via pydantic
 urllib3==2.4.0
     # via
+    #   botocore
     #   pinecone
     #   requests
+uv==0.8.7
+    # via braintrust
 voyageai==0.3.4
     # via rag-braintrust-bot (pyproject.toml)
 yarl==1.20.0

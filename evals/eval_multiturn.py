@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-from braintrust import Eval, init_dataset, traced, wrap_openai
+from braintrust import Eval, init_dataset, traced, wrap_openai, init_function
 from dotenv import load_dotenv
 import sys
 from openai import OpenAI
@@ -19,10 +19,6 @@ from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
 
 # Import local scorer functions
 from push_scorers import (
-    document_retrieval_check,
-    answer_relevance_check,
-    answer_faithfulness_check,
-    response_structure_check,
     rag_precision,
     rag_recall,
     rag_f1
@@ -215,6 +211,11 @@ def create_task(model_name):
 # Load the dataset once (it will be reused for all models)
 dataset = init_dataset(project=project_name, name="BraintrustMultiTurnQA")
 
+# Load the LLM judges that were pushed to Braintrust
+rag_factuality_llm = init_function(project_name=project_name, slug="rag-factuality-llm")
+rag_relevance_llm = init_function(project_name=project_name, slug="rag-relevance-llm")
+rag_completeness_llm = init_function(project_name=project_name, slug="rag-completeness-llm")
+
 # Run evaluation for each model
 for model_name in MODELS_TO_EVALUATE:
     print(f"\n{'='*60}")
@@ -232,13 +233,12 @@ for model_name in MODELS_TO_EVALUATE:
             data=dataset,
             scores=[
                 # Local context-aware scorers only
-                document_retrieval_check,
-                answer_relevance_check,
-                answer_faithfulness_check,
-                response_structure_check,
                 rag_precision,
                 rag_recall,
-                rag_f1
+                rag_f1,
+                rag_factuality_llm,
+                rag_relevance_llm,
+                rag_completeness_llm,
             ],
             metadata={
                 'model': model_name,

@@ -15,7 +15,7 @@ license = {text = "MIT"}
 dependencies = [
     "autoevals>=0.0.127",
     "beautifulsoup4>=4.13.0",
-    "braintrust>=0.2.0",
+    "braintrust[cli]>=0.2.0",
     "jsonpath>=0.82.0",
     "pinecone[grpc]>=6.0.0",
     "voyageai>=0.3.0",
