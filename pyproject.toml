@@ -19,7 +19,7 @@ dependencies = [
     "jsonpath>=0.82.2",
     "pinecone[grpc]>=6.0.2",
     "voyageai>=0.3.2",
-    "openai>=0.11.0",
+    "openai>=1.0.0,<1.50.0",
 ]
 
 [tool.hatch.build.targets.wheel]

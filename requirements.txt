@@ -105,7 +105,7 @@ multidict==6.4.3
     #   yarl
 numpy==2.2.5
     # via voyageai
-openai==1.99.3
+openai==1.49.0
     # via rag-braintrust-bot (pyproject.toml)
 orjson==3.11.1
     # via langsmith
