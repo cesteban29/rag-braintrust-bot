@@ -19,19 +19,39 @@ class ScorerParameters(BaseModel):
     input: str = ""
     metadata: dict = {}
 
-def precision_handler(input, output, expected, metadata):
+def rag_precision(input, output, expected, metadata):
     """
-    Precision scorer handler.
+    Context-aware precision scorer handler.
     Measures what percentage of retrieved documents were actually used in the response.
+    Handles both single-turn and multi-turn conversations.
     """
-    retrieved_docs = metadata.get('retrieved_documents', []) if metadata else []
-    
+    if not metadata:
+        return 0.0
+        
+    retrieved_docs = metadata.get('retrieved_documents', [])
     if not retrieved_docs:
         return 0.0
     
-    # Check which documents were actually referenced/used in the output
+    # Handle multi-turn conversations
+    if 'conversation_history' in metadata:
+        # For multi-turn, check document usage across all assistant responses
+        conversation_history = metadata.get('conversation_history', [])
+        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        
+        if not assistant_responses:
+            return 0.0
+            
+        # Combine all assistant responses for analysis
+        combined_output = ' '.join(assistant_responses).lower()
+    else:
+        # Single-turn: use the direct output
+        combined_output = output.lower() if output else ''
+    
+    if not combined_output:
+        return 0.0
+    
+    # Check which documents were actually referenced/used
     used_docs = 0
-    output_lower = output.lower() if output else ''
     
     for doc in retrieved_docs:
         doc_content = doc.get('content', '').lower()
@@ -39,93 +59,358 @@ def precision_handler(input, output, expected, metadata):
         
         # Extract key phrases from document
         doc_words = set(word for word in doc_content.split() if len(word) > 4)
-        output_words = set(word for word in output_lower.split() if len(word) > 4)
+        output_words = set(word for word in combined_output.split() if len(word) > 4)
         overlap = doc_words.intersection(output_words)
         
         # Consider document used if significant overlap
         overlap_ratio = len(overlap) / len(doc_words) if doc_words else 0
-        if overlap_ratio > 0.1 or doc_title in output_lower:
+        if overlap_ratio > 0.1 or doc_title in combined_output:
             used_docs += 1
     
-    return used_docs / len(retrieved_docs) if retrieved_docs else 0.0
+    return used_docs / len(retrieved_docs)
 
 
-def recall_handler(input, output, expected, metadata):
+def rag_recall(input, output, expected, metadata):
     """
-    Recall scorer handler.
+    Context-aware recall scorer handler.
     Measures what percentage of relevant information was included in the response.
+    Handles both single-turn and multi-turn conversations.
     """
-    # Extract query from input
-    if isinstance(input, dict):
-        query = input.get('query', input.get('input', ''))
-    else:
-        query = str(input)
+    if not metadata:
+        metadata = {}
     
-    if not output or not query:
+    # Extract query - handle both single-turn and multi-turn contexts
+    if 'conversation_history' in metadata:
+        # For multi-turn, extract the original query from conversation history
+        conversation_history = metadata.get('conversation_history', [])
+        user_messages = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'user']
+        
+        if user_messages:
+            # Use the first user message as the main query, combine with later questions
+            query = ' '.join(user_messages)
+        else:
+            query = str(input) if input else ''
+            
+        # Combine all assistant responses for analysis
+        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        combined_output = ' '.join(assistant_responses) if assistant_responses else (output or '')
+    else:
+        # Single-turn: extract query from input
+        if isinstance(input, dict):
+            query = input.get('query', input.get('input', ''))
+        else:
+            query = str(input) if input else ''
+        combined_output = output or ''
+    
+    if not combined_output or not query:
         return 0.0
     
     query_lower = query.lower()
     stop_words = {'what', 'how', 'when', 'where', 'why', 'who', 'which', 'can', 'does', 'is', 'are', 'the', 'a', 'an'}
     
-    # Extract key concepts
+    # Extract key concepts from all user queries
     query_words = query_lower.split()
     key_concepts = [w for w in query_words if len(w) > 3 and w not in stop_words]
     
     if not key_concepts:
         return 1.0
     
-    # Check which concepts are covered
-    output_lower = output.lower()
+    # Check which concepts are covered in the combined output
+    output_lower = combined_output.lower()
     covered_concepts = sum(1 for concept in key_concepts 
                           if concept in output_lower or concept[:-1] in output_lower)
     
     return covered_concepts / len(key_concepts)
 
 
-def f1_handler(input, output, expected, metadata):
+def rag_f1(input, output, expected, metadata):
     """
-    F1 scorer handler.
+    Context-aware F1 scorer handler.
     Harmonic mean of precision and recall.
+    Works with both single-turn and multi-turn conversations.
     """
-    precision = precision_handler(input, output, expected, metadata)
-    recall = recall_handler(input, output, expected, metadata)
+    precision = rag_precision(input, output, expected, metadata)
+    recall = rag_recall(input, output, expected, metadata)
     
     if precision + recall == 0:
         return 0.0
     
     return 2 * (precision * recall) / (precision + recall)
 
+def document_retrieval_check(input, output, expected, metadata):
+    """
+    Context-aware document retrieval checker.
+    Evaluates the quality and relevance of retrieved documents.
+    """
+    if not metadata:
+        return 0.0
+        
+    retrieved_docs = metadata.get('retrieved_documents', [])
+    
+    if not retrieved_docs:
+        return 0.0
+    
+    # Score based on document count and relevance scores
+    doc_count = len(retrieved_docs)
+    avg_score = sum(doc.get('score', 0) for doc in retrieved_docs) / doc_count if doc_count > 0 else 0
+    
+    # Combine document count (normalized) and average relevance score
+    count_score = min(doc_count / 3, 1.0)  # Normalize to 1 for 3+ docs
+    final_score = (count_score * 0.3) + (avg_score * 0.7)
+    
+    return final_score
+
+
+def answer_relevance_check(input, output, expected, metadata):
+    """
+    Context-aware answer relevance checker.
+    Checks if the generated answer is relevant to the input query.
+    """
+    if not metadata:
+        metadata = {}
+    
+    # Handle multi-turn conversations
+    if 'conversation_history' in metadata:
+        conversation_history = metadata.get('conversation_history', [])
+        user_messages = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'user']
+        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        
+        if not user_messages or not assistant_responses:
+            return 0.0
+            
+        # Combine user queries and assistant responses for analysis
+        combined_query = ' '.join(user_messages)
+        combined_output = ' '.join(assistant_responses)
+    else:
+        # Single-turn: extract query from input
+        if isinstance(input, dict):
+            combined_query = input.get('query', input.get('input', ''))
+        else:
+            combined_query = str(input) if input else ''
+        combined_output = output or ''
+    
+    if not combined_output or not combined_query:
+        return 0.0
+    
+    # Simple keyword overlap scoring
+    query_words = set(combined_query.lower().split())
+    output_words = set(combined_output.lower().split())
+    
+    # Remove common stopwords
+    stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should'}
+    query_words = query_words - stopwords
+    output_words = output_words - stopwords
+    
+    if not query_words:
+        return 0.5  # Neutral score if no meaningful query words
+    
+    overlap = len(query_words.intersection(output_words))
+    overlap_score = overlap / len(query_words)
+    
+    # Length check - penalize very short responses
+    length_score = min(len(combined_output) / 100, 1.0)  # Normalize to 1 for 100+ chars
+    
+    # Combine scores
+    final_score = (overlap_score * 0.7) + (length_score * 0.3)
+    
+    return final_score
+
+
+def answer_faithfulness_check(input, output, expected, metadata):
+    """
+    Context-aware answer faithfulness checker.
+    Checks if the answer is faithful to the retrieved documents.
+    """
+    if not metadata:
+        return 0.5
+        
+    retrieved_docs = metadata.get('retrieved_documents', [])
+    if not retrieved_docs:
+        return 0.5  # Neutral score if no context available
+    
+    # Handle multi-turn conversations
+    if 'conversation_history' in metadata:
+        conversation_history = metadata.get('conversation_history', [])
+        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        combined_output = ' '.join(assistant_responses) if assistant_responses else (output or '')
+    else:
+        combined_output = output or ''
+    
+    if not combined_output:
+        return 0.0
+    
+    # Combine all document content
+    document_contents = [doc.get('content', '') for doc in retrieved_docs if 'content' in doc]
+    context = ' '.join(document_contents)
+    
+    # Simple faithfulness check based on content overlap
+    context_words = set(context.lower().split())
+    output_words = set(combined_output.lower().split())
+    
+    # Remove stopwords
+    stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should'}
+    context_words = context_words - stopwords
+    output_words = output_words - stopwords
+    
+    if not output_words:
+        return 0.0
+    
+    # Calculate what percentage of output words are supported by context
+    supported_words = output_words.intersection(context_words)
+    faithfulness_score = len(supported_words) / len(output_words)
+    
+    return faithfulness_score
+
+
+def response_structure_check(input, output, expected, metadata):
+    """
+    Context-aware response structure checker.
+    Checks if the response follows good documentation answer structure.
+    """
+    if not metadata:
+        metadata = {}
+    
+    # Handle multi-turn conversations
+    if 'conversation_history' in metadata:
+        conversation_history = metadata.get('conversation_history', [])
+        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        
+        if not assistant_responses:
+            return 0.0
+            
+        # Evaluate structure across all responses and average
+        total_score = 0
+        
+        for response in assistant_responses:
+            score = 0
+            
+            # Check for adequate length (not too short)
+            if len(response) > 50:
+                score += 0.2
+            
+            # Check for structured formatting (bullet points, numbers, etc.)
+            if any(marker in response for marker in ['•', '-', '*', '1.', '2.', '3.']):
+                score += 0.2
+            
+            # Check for code examples (backticks)
+            if '`' in response:
+                score += 0.2
+            
+            # Check for clear sentence structure (periods)
+            if response.count('.') >= 2:
+                score += 0.2
+            
+            # Check for helpful details (mentions specific features/tools)
+            braintrust_terms = ['braintrust', 'evaluation', 'dataset', 'prompt', 'logging', 'tracing', 'playground']
+            if any(term in response.lower() for term in braintrust_terms):
+                score += 0.2
+                
+            total_score += score
+        
+        return total_score / len(assistant_responses)
+    else:
+        # Single-turn evaluation
+        response = output or ''
+        if not response:
+            return 0.0
+        
+        score = 0
+        
+        # Check for adequate length (not too short)
+        if len(response) > 50:
+            score += 0.2
+        
+        # Check for structured formatting (bullet points, numbers, etc.)
+        if any(marker in response for marker in ['•', '-', '*', '1.', '2.', '3.']):
+            score += 0.2
+        
+        # Check for code examples (backticks)
+        if '`' in response:
+            score += 0.2
+        
+        # Check for clear sentence structure (periods)
+        if response.count('.') >= 2:
+            score += 0.2
+        
+        # Check for helpful details (mentions specific features/tools)
+        braintrust_terms = ['braintrust', 'evaluation', 'dataset', 'prompt', 'logging', 'tracing', 'playground']
+        if any(term in response.lower() for term in braintrust_terms):
+            score += 0.2
+        
+        return score
+
+
 # Create all the scorers
-print(f"Pushing scorers to Braintrust project: {project_name}")
+print(f"Pushing context-aware scorers to Braintrust project: {project_name}")
+
+# Document Retrieval Check Scorer
+print("Creating document_retrieval_check scorer...")
+project.scorers.create(
+    name="Document Retrieval Check",
+    slug="document-retrieval-check",
+    description="Context-aware evaluation of retrieved document quality and relevance",
+    parameters=ScorerParameters,
+    handler=document_retrieval_check,
+)
+
+# Answer Relevance Check Scorer
+print("Creating answer_relevance_check scorer...")
+project.scorers.create(
+    name="Answer Relevance Check",
+    slug="answer-relevance-check",
+    description="Context-aware check if the answer is relevant to the query (handles multi-turn)",
+    parameters=ScorerParameters,
+    handler=answer_relevance_check,
+)
+
+# Answer Faithfulness Check Scorer
+print("Creating answer_faithfulness_check scorer...")
+project.scorers.create(
+    name="Answer Faithfulness Check",
+    slug="answer-faithfulness-check",
+    description="Context-aware check if the answer is faithful to retrieved documents",
+    parameters=ScorerParameters,
+    handler=answer_faithfulness_check,
+)
+
+# Response Structure Check Scorer
+print("Creating response_structure_check scorer...")
+project.scorers.create(
+    name="Response Structure Check",
+    slug="response-structure-check",
+    description="Context-aware evaluation of response structure and formatting",
+    parameters=ScorerParameters,
+    handler=response_structure_check,
+)
 
 # RAG Precision Scorer
-print("Creating precision_handler scorer...")
+print("Creating rag_precision scorer...")
 project.scorers.create(
     name="RAG Precision",
     slug="rag-precision", 
-    description="Measures what percentage of retrieved documents were actually used in the response",
+    description="Context-aware precision: percentage of retrieved documents actually used",
     parameters=ScorerParameters,
-    handler=precision_handler,
+    handler=rag_precision,
 )
 
 # RAG Recall Scorer  
-print("Creating recall_handler scorer...")
+print("Creating rag_recall scorer...")
 project.scorers.create(
     name="RAG Recall",
     slug="rag-recall",
-    description="Measures what percentage of relevant information was included in the response",
+    description="Context-aware recall: percentage of relevant information included",
     parameters=ScorerParameters,
-    handler=recall_handler,
+    handler=rag_recall,
 )
 
 # RAG F1 Scorer
-print("Creating f1_handler scorer...")
+print("Creating rag_f1 scorer...")
 project.scorers.create(
     name="RAG F1",
     slug="rag-f1", 
-    description="Harmonic mean of precision and recall for balanced evaluation",
+    description="Context-aware F1: harmonic mean of precision and recall",
     parameters=ScorerParameters,
-    handler=f1_handler,
+    handler=rag_f1,
 )
 
 # RAG Factuality LLM Scorer
