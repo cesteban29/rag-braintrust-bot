@@ -16,6 +16,8 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 from rag_braintrust_bot.rag_demo import rag_tool, SYSTEM_PROMPT
 from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
 
+# Scorers are now pushed to Braintrust and referenced by slug
+
 # Load environment variables
 load_dotenv()
 
@@ -412,10 +414,18 @@ for model_name in MODELS_TO_EVALUATE:
             task=task_for_model,
             data=dataset,
             scores=[
+                # Local function scorers
                 document_retrieval_check,
                 answer_relevance_check,
                 answer_faithfulness_check,
-                response_structure_check
+                response_structure_check,
+                # Braintrust-pushed scorers (referenced by slug)
+                "rag-precision",
+                "rag-recall", 
+                "rag-f1",
+                "rag-factuality",
+                "rag-relevance",
+                "rag-completeness"
             ],
             experiment_name=f"basic_{model_name}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         )
