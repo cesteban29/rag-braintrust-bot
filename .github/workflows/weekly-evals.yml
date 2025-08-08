@@ -4,7 +4,23 @@ on:
   schedule:
     # Run every Monday at 9:00 AM UTC
     - cron: '0 9 * * 1'
-  workflow_dispatch:  # Allow manual trigger for testing
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      run_basic:
+        description: 'Run Basic RAG Evaluation'
+        required: false
+        default: true
+        type: boolean
+      run_multiturn:
+        description: 'Run Multi-turn Evaluation'
+        required: false
+        default: true
+        type: boolean
+      reason:
+        description: 'Reason for running evaluation'
+        required: false
+        default: 'Manual trigger'
+        type: string
   pull_request:  # Also run on PRs for continuous testing
     paths:
       - 'src/**'
@@ -15,6 +31,7 @@ jobs:
   eval-basic:
     name: Run Basic RAG Evaluation
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.run_basic
     
     steps:
     - name: Checkout repository
@@ -40,10 +57,15 @@ jobs:
         comment-on-pr: true  # Add evaluation results as PR comment
       env:
         BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        BRAINTRUST_PROJECT_NAME: ${{ variables.BRAINTRUST_PROJECT_NAME }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
+        INDEX_NAME: ${{ variables.INDEX_NAME }}
 
   eval-multiturn:
     name: Run Multi-turn Conversation Evaluation
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.run_multiturn
     
     steps:
     - name: Checkout repository
@@ -69,6 +91,10 @@ jobs:
         comment-on-pr: true  # Add evaluation results as PR comment
       env:
         BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        BRAINTRUST_PROJECT_NAME: ${{ variables.BRAINTRUST_PROJECT_NAME }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
+        INDEX_NAME: ${{ variables.INDEX_NAME }}
 
   summary:
     name: Evaluation Summary
