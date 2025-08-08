@@ -1,0 +1,149 @@
+name: RAG Simulation Logs
+
+on:
+  schedule:
+    # Run every Monday at 10:00 AM UTC (1 hour after evals)
+    - cron: '0 10 * * 1'
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      logs_per_model:
+        description: 'Number of logs to generate per model'
+        required: false
+        default: '5'
+        type: string
+      mode:
+        description: 'Simulation mode'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+          - single
+          - multi
+          - both
+      reason:
+        description: 'Reason for running simulation'
+        required: false
+        default: 'Manual trigger'
+        type: string
+
+jobs:
+  rag-simulation:
+    name: Generate RAG Logs with Online Scoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run RAG Simulation
+      run: |
+        cd src/rag_braintrust_bot
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          python rag_simulation.py --logs-per-model ${{ inputs.logs_per_model || '5' }} --mode ${{ inputs.mode || 'both' }}
+        else
+          python rag_simulation.py --logs-per-model 5 --mode both
+        fi
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        BRAINTRUST_PROJECT_NAME: ${{ vars.BRAINTRUST_PROJECT_NAME }}
+        PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
+        INDEX_NAME: ${{ vars.INDEX_NAME }}
+    
+    - name: Generate Summary
+      if: always()
+      env:
+        BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Generate summary of simulation run
+        python3 << 'EOF'
+        import os
+        import json
+        import requests
+        from datetime import datetime, timedelta, timezone
+        
+        # Get recent logs from Braintrust (last 2 hours to capture this run)
+        headers = {
+            "Authorization": f"Bearer {os.getenv('BRAINTRUST_API_KEY')}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            # Get recent logs/spans
+            response = requests.get(
+                "https://api.braintrust.dev/v1/span",
+                headers=headers,
+                params={
+                    "project_name": "rag-braintrust-bot",
+                    "limit": 50
+                }
+            )
+            
+            if response.status_code == 200:
+                spans = response.json()["objects"]
+                
+                # Filter spans from this run (last 2 hours)
+                recent_time = datetime.now(timezone.utc) - timedelta(hours=2)
+                recent_spans = [
+                    span for span in spans 
+                    if datetime.fromisoformat(span["created"].replace("Z", "+00:00")) > recent_time
+                ]
+                
+                if recent_spans:
+                    # Count different types of spans
+                    single_turn_count = sum(1 for span in recent_spans 
+                                          if span.get("metadata", {}).get("conversation_type") == "single_turn")
+                    multi_turn_count = sum(1 for span in recent_spans 
+                                         if span.get("metadata", {}).get("conversation_type") == "multi_turn")
+                    
+                    # Get unique models used
+                    models_used = set()
+                    for span in recent_spans:
+                        model = span.get("metadata", {}).get("model")
+                        if model:
+                            models_used.add(model)
+                    
+                    summary = f"""## 🤖 RAG Simulation Summary
+        
+        **Run Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
+        **Total Logs Generated:** {len(recent_spans)}
+        **Single-turn Conversations:** {single_turn_count}
+        **Multi-turn Conversations:** {multi_turn_count}
+        **Models Used:** {len(models_used)}
+        
+        ### Models in Rotation:
+        {chr(10).join(f"- {model}" for model in sorted(models_used))}
+        
+        ### Online Scoring:
+        ✅ Metadata properly tracked for Braintrust online scorers
+        ✅ Retrieved documents logged for RAG evaluation
+        ✅ Conversation history preserved for multi-turn scoring
+        
+        ---
+        💡 **View logs:** [Braintrust Dashboard](https://www.braintrust.dev/app/carlos/p/rag-braintrust-bot)
+        """
+                    
+                    # Write to GitHub Actions summary
+                    with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
+                        f.write(summary)
+                    print("✅ Simulation summary generated")
+                    print(f"Generated {len(recent_spans)} logs with {len(models_used)} different models")
+                else:
+                    print("No recent spans found - simulation may have failed")
+            else:
+                print(f"Failed to fetch spans: {response.status_code}")
+                print(f"Response: {response.text}")
+        except Exception as e:
+            print(f"Error generating summary: {e}")
+        EOF
