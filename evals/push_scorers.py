@@ -19,6 +19,26 @@ class ScorerParameters(BaseModel):
     input: str = ""
     metadata: dict = {}
 
+
+def safe_get_message_content(msg):
+    """
+    Safely extract content from a message, handling both dict and ChatCompletionMessage objects.
+    """
+    if hasattr(msg, 'content'):  # ChatCompletionMessage object
+        return getattr(msg, 'content', '') or ''
+    else:  # Dictionary format
+        return safe_get_message_content(msg)
+
+
+def safe_get_message_role(msg):
+    """
+    Safely extract role from a message, handling both dict and ChatCompletionMessage objects.
+    """
+    if hasattr(msg, 'role'):  # ChatCompletionMessage object
+        return getattr(msg, 'role', '')
+    else:  # Dictionary format
+        return safe_get_message_role(msg)
+
 def rag_precision(input, output, expected, metadata):
     """
     Context-aware precision scorer handler.
@@ -36,7 +56,7 @@ def rag_precision(input, output, expected, metadata):
     if 'conversation_history' in metadata:
         # For multi-turn, check document usage across all assistant responses
         conversation_history = metadata.get('conversation_history', [])
-        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        assistant_responses = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'assistant']
         
         if not assistant_responses:
             return 0.0
@@ -83,7 +103,7 @@ def rag_recall(input, output, expected, metadata):
     if 'conversation_history' in metadata:
         # For multi-turn, extract the original query from conversation history
         conversation_history = metadata.get('conversation_history', [])
-        user_messages = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'user']
+        user_messages = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'user']
         
         if user_messages:
             # Use the first user message as the main query, combine with later questions
@@ -92,7 +112,7 @@ def rag_recall(input, output, expected, metadata):
             query = str(input) if input else ''
             
         # Combine all assistant responses for analysis
-        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        assistant_responses = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'assistant']
         combined_output = ' '.join(assistant_responses) if assistant_responses else (output or '')
     else:
         # Single-turn: extract query from input
@@ -172,8 +192,8 @@ def answer_relevance_check(input, output, expected, metadata):
     # Handle multi-turn conversations
     if 'conversation_history' in metadata:
         conversation_history = metadata.get('conversation_history', [])
-        user_messages = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'user']
-        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        user_messages = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'user']
+        assistant_responses = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'assistant']
         
         if not user_messages or not assistant_responses:
             return 0.0
@@ -231,7 +251,7 @@ def answer_faithfulness_check(input, output, expected, metadata):
     # Handle multi-turn conversations
     if 'conversation_history' in metadata:
         conversation_history = metadata.get('conversation_history', [])
-        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        assistant_responses = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'assistant']
         combined_output = ' '.join(assistant_responses) if assistant_responses else (output or '')
     else:
         combined_output = output or ''
@@ -273,7 +293,7 @@ def response_structure_check(input, output, expected, metadata):
     # Handle multi-turn conversations
     if 'conversation_history' in metadata:
         conversation_history = metadata.get('conversation_history', [])
-        assistant_responses = [msg.get('content', '') for msg in conversation_history if msg.get('role') == 'assistant']
+        assistant_responses = [safe_get_message_content(msg) for msg in conversation_history if safe_get_message_role(msg) == 'assistant']
         
         if not assistant_responses:
             return 0.0
