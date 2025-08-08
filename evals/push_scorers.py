@@ -27,7 +27,7 @@ def safe_get_message_content(msg):
     if hasattr(msg, 'content'):  # ChatCompletionMessage object
         return getattr(msg, 'content', '') or ''
     else:  # Dictionary format
-        return safe_get_message_content(msg)
+        return msg.get('content', '') or ''
 
 
 def safe_get_message_role(msg):
@@ -37,7 +37,7 @@ def safe_get_message_role(msg):
     if hasattr(msg, 'role'):  # ChatCompletionMessage object
         return getattr(msg, 'role', '')
     else:  # Dictionary format
-        return safe_get_message_role(msg)
+        return msg.get('role', '')
 
 def rag_precision(input, output, expected, metadata):
     """
