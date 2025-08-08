@@ -503,7 +503,6 @@ for model_name in MODELS_TO_EVALUATE:
         # Run the evaluation with the model name in the experiment name
         Eval(
             project_name,
-            name="not_eval",
             task=task_for_model,
             data=dataset,
             scores=[
