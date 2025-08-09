@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 import logging
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
-from rag_braintrust_bot.rag_demo import rag_tool, SYSTEM_PROMPT
+from rag_braintrust_bot.rag_simulation import rag_tool, SYSTEM_PROMPT
 from rag_braintrust_bot.tools.retrieval_tool import handler as get_documents
 
 # Import local context-aware scorer functions
