@@ -30,20 +30,28 @@ class Document(BaseModel):
     Represents a retrieved document section with its metadata.
     
     This class defines the structure of each document returned from Pinecone.
-    It matches the structure used in the ingest.py script where documents
-    are stored with a title and content.
+    It matches the structure used in the ingest_web.py script where documents
+    are stored with title, content, and additional metadata.
     
     Attributes:
         title (str): The title/heading of the document section
         content (str): The actual content/text of the document section
         id (str): The unique identifier of the document
         score (float): The similarity score with the query
+        source (str): The source of the document (e.g., 'braintrust_docs')
+        url (str): The URL where the document was fetched from
+        section_type (str): Type of section (e.g., 'changelog', 'api', 'sdk')
+        date (str): Optional date for changelog entries
         tags (List[str]): Any tags associated with the document
     """
     title: str
     content: str
     id: str
     score: float
+    source: str = "unknown"
+    url: str = ""
+    section_type: str = "docs"
+    date: str = ""
     tags: List[str] = []
 
 class DocumentOutput(BaseModel):
@@ -85,10 +93,11 @@ def handler(query: str):
     
     # Initialize Pinecone client and connect to the index
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-    index = pc.Index("dev-rag-bot")
+    index_name = os.getenv("INDEX_NAME", "dev-rag-bot")
+    index = pc.Index(index_name)
     
-    # Use the same embedding model as specified in ingest.py
-    MODEL = 'voyage-3'
+    # Use the same embedding model as specified in ingest_web.py
+    MODEL = os.getenv('EMBEDDING_MODEL', 'voyage-3')
 
     # Create embedding for the query
     xq = vo.embed(query, model=MODEL, input_type='query').embeddings[0]
@@ -106,6 +115,10 @@ def handler(query: str):
         'content': match['metadata']['content'],
         'id': match['id'],
         'score': match['score'],
+        'source': match['metadata'].get('source', 'unknown'),
+        'url': match['metadata'].get('url', ''),
+        'section_type': match['metadata'].get('section_type', 'docs'),
+        'date': match['metadata'].get('date', ''),
         'tags': match['metadata'].get('tags', [])
     } for match in response['matches']]
 
