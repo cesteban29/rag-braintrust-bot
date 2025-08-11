@@ -47,6 +47,162 @@ braintrust_logger = init_logger(project="rag-braintrust-bot-frontend")
 conversation_traces = {}
 conversation_root_spans = {}
 
+# System prompt for the assistant
+SYSTEM_PROMPT = """You are a helpful assistant specializing in Braintrust documentation and best practices. 
+Your role is to provide clear, accurate answers about Braintrust's features, tools, and implementation details.
+
+When answering:
+1. First use the get_documents tool to retrieve relevant documentation
+2. Use the retrieved context to provide accurate answers
+3. Be specific and include code examples when relevant
+4. If you're unsure about something, say so rather than making assumptions
+5. Focus on practical implementation details
+"""
+
+# RAG tool definition
+rag_tool = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_documents",
+            "description": "Retrieve relevant documents from the Braintrust documentation based on a query.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to find relevant documentation"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
+def get_next_model():
+    """Get the next model for rotation (simplified for API server)."""
+    return LLM_MODEL
+
+def get_model_provider(model_name: str) -> str:
+    """Get the provider name for a given model."""
+    if model_name.startswith("gpt-"):
+        return "openai"
+    elif model_name.startswith("claude-"):
+        return "anthropic" 
+    elif model_name.startswith("grok"):
+        return "xai"
+    elif "/" in model_name:
+        return "together"
+    else:
+        return "unknown"
+
+async def process_conversation_turn(query: str, conversation_history: list, parent_span) -> str:
+    """Process a single conversation turn with tool calls, mimicking rag_simulation.py behavior."""
+    try:
+        # Get the model for this query
+        current_model = get_next_model()
+        
+        # Build messages for the conversation
+        messages = [
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT
+            }
+        ]
+        
+        # Add conversation history
+        messages.extend(conversation_history)
+        
+        # Add current query
+        messages.append({
+            "role": "user",
+            "content": query
+        })
+        
+        # Get initial completion with tool calls
+        response = openai_client.chat.completions.create(
+            model=current_model,
+            messages=messages,
+            tools=rag_tool,
+            tool_choice="auto"
+        )
+        
+        # Handle tool calls and get documents
+        retrieved_documents = []
+        if response.choices[0].message.tool_calls:
+            tool_response = await handle_tool_calls_async(response.choices[0].message.tool_calls, parent_span)
+            retrieved_documents = tool_response.get("retrieved_documents", [])
+            
+            # Add tool calls to messages
+            messages.extend([
+                response.choices[0].message,
+                {
+                    "role": "tool",
+                    "name": "get_documents",
+                    "content": json.dumps(tool_response["results"]),
+                    "tool_call_id": tool_response["tool_call_id"]
+                }
+            ])
+            
+            final_response = openai_client.chat.completions.create(
+                model=current_model,
+                messages=messages,
+                max_tokens=1000
+            )
+            answer = final_response.choices[0].message.content
+        else:
+            # No tool calls - use the original response
+            answer = response.choices[0].message.content
+        
+        return answer or ""
+        
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+async def handle_tool_calls_async(tool_calls, parent_span) -> dict:
+    """Handle tool calls from OpenAI and return retrieved documents (async version)."""
+    import json
+    
+    retrieved_documents = []
+    
+    for tool_call in tool_calls:
+        if tool_call.function.name == "get_documents":
+            # Parse the query from the function arguments
+            args = json.loads(tool_call.function.arguments)
+            query = args.get("query", "")
+            
+            # Create a span for document retrieval
+            with braintrust_logger.start_span(name="get_documents", type="tool", parent=parent_span) as span:
+                # Call the RAG tool
+                rag_response = get_documents_handler(query)
+                
+                # Prepare retrieved documents for scorers
+                for doc in rag_response["documents"]:
+                    retrieved_documents.append({
+                        "id": doc["id"],
+                        "title": doc["title"],
+                        "content": doc["content"],
+                        "score": doc["score"],
+                        "tags": doc.get("tags", [])
+                    })
+                
+                # Log the input query & document ids, plus retrieved_documents for scorers
+                span.log(
+                    inputs={"query": query},
+                    metadata={
+                        "tool_name": "get_documents", 
+                        "document_ids": [doc['id'] for doc in rag_response["documents"]],
+                        "retrieved_documents": retrieved_documents
+                    }
+                )
+                
+                return {
+                    "results": rag_response,
+                    "tool_call_id": tool_call.id,
+                    "retrieved_documents": retrieved_documents
+                }
+
 # Validate required environment variables for Braintrust
 required_env_vars = ["BRAINTRUST_API_KEY", "VOYAGEAI_API_KEY", "PINECONE_API_KEY"]
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
@@ -103,250 +259,10 @@ class QueryResponse(BaseModel):
     conversation_history: List[Message]
     conversation_id: str  # Return the conversation ID for tracking
 
-# System prompt for the RAG assistant
-SYSTEM_PROMPT = """You are a helpful assistant specializing in Braintrust documentation and best practices. 
-Your role is to provide clear, accurate answers about Braintrust's features, tools, and implementation details.
-
-When answering:
-1. First use the get_documents tool to retrieve relevant documentation
-2. Use the retrieved context to provide accurate answers
-3. Be specific and include code examples when relevant from the documentation
-4. If you're unsure about something, say so rather than making assumptions
-5. Focus on practical implementation details
-6. Structure your responses clearly with proper markdown formatting
-
-FORMATTING GUIDELINES:
-- Use proper markdown headers (# ## ###) instead of single # on empty lines
-- Use code blocks (```language\ncode\n```) for multi-line code examples
-- Use `backticks` for inline code, function names, and technical terms
-- Use **bold** for important concepts and *italics* for emphasis
-- Use bullet points (-) and numbered lists (1.) for step-by-step instructions
-- Include clickable links in [text](url) format when referencing external resources"""
-
-# RAG tool definition for OpenAI function calling
-rag_tool = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_documents",
-            "description": "Retrieve relevant documents from the Braintrust documentation based on a query.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query to find relevant documentation"
-                    }
-                },
-                "required": ["query"]
-            }
-        }
-    }
-]
-
-def handle_tool_calls(tool_calls, parent_export) -> Dict[str, Any]:
-    """Handle tool calls from OpenAI and return retrieved documents."""
-    retrieved_documents = []
-    tool_responses = []
-    
-    for tool_call in tool_calls:
-        if tool_call.function.name == "get_documents":
-            # Parse the query from the function arguments
-            import json
-            args = json.loads(tool_call.function.arguments)
-            query = args.get("query", "")
-            
-            # Create a traced function for this tool call
-            @traced(name="get_documents", type="tool", parent=parent_export)
-            def call_get_documents():
-                # Call the RAG tool
-                rag_response = get_documents_handler(query)
-                
-                # Prepare retrieved documents for scorers
-                docs = []
-                for doc in rag_response["documents"]:
-                    docs.append({
-                        "id": doc["id"],
-                        "title": doc["title"],
-                        "content": doc["content"],
-                        "score": doc["score"],
-                        "section_type": doc["section_type"],
-                        "url": doc.get("url", ""),
-                        "tags": doc.get("tags", [])
-                    })
-                
-                # Log the input query & document ids
-                current_span().log(
-                    inputs={"query": query},
-                    metadata={
-                        "tool_name": "get_documents", 
-                        "document_ids": [doc['id'] for doc in rag_response["documents"]],
-                        "retrieved_documents": docs,
-                        "num_documents": len(rag_response["documents"])
-                    }
-                )
-                
-                return rag_response, docs
-            
-            # Call the traced function
-            rag_response, docs = call_get_documents()
-            retrieved_documents.extend(docs)
-            
-            # Format response for OpenAI
-            tool_responses.append({
-                "tool_call_id": tool_call.id,
-                "role": "tool",
-                "name": "get_documents",
-                "content": json.dumps(rag_response)
-            })
-    
-    return {
-        "tool_responses": tool_responses,
-        "retrieved_documents": retrieved_documents
-    }
-
-@traced(name="llm_generation", type="llm")
-def generate_rag_response(query: str, conversation_history: List[Message] = None) -> tuple[str, List[Source]]:
-    """Generate a RAG response using OpenAI function calling."""
-    try:
-        # Build messages for the conversation
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
-        # Add conversation history
-        if conversation_history:
-            for msg in conversation_history:
-                messages.append({"role": msg.role, "content": msg.content})
-        
-        # Add current user query
-        messages.append({"role": "user", "content": query})
-        
-        # Get initial completion with tool calls
-        response = openai_client.chat.completions.create(
-            model=LLM_MODEL,
-            messages=messages,
-            tools=rag_tool,
-            tool_choice="auto",
-            max_tokens=1500,
-            temperature=0.1
-        )
-        
-        # Handle tool calls and get documents
-        retrieved_documents = []
-        sources = []
-        
-        if response.choices[0].message.tool_calls:
-            # Pass current span export as parent for tool calls
-            tool_result = handle_tool_calls(response.choices[0].message.tool_calls, current_span().export())
-            retrieved_documents = tool_result.get("retrieved_documents", [])
-            
-            # Convert retrieved documents to Source format
-            for doc in retrieved_documents:
-                source = Source(
-                    title=doc["title"],
-                    content=doc["content"],
-                    score=doc["score"],
-                    section_type=doc["section_type"],
-                    url=doc.get("url", ""),
-                    summary=doc.get("summary"),
-                    keywords=doc.get("keywords"), 
-                    questions=doc.get("questions"),
-                    date=doc.get("date")
-                )
-                sources.append(source)
-            
-            # Add tool calls and responses to message history
-            messages.append(response.choices[0].message)
-            messages.extend(tool_result["tool_responses"])
-            
-            # Get final response after tool calls
-            final_response = openai_client.chat.completions.create(
-                model=LLM_MODEL,
-                messages=messages,
-                max_tokens=1500,
-                temperature=0.1
-            )
-            answer = final_response.choices[0].message.content
-        else:
-            # No tool calls - use the original response
-            answer = response.choices[0].message.content
-        
-        answer = answer or "I apologize, but I couldn't generate a response."
-        
-        # Log metadata for the LLM generation
-        current_span().log(
-            metadata={
-                "model": LLM_MODEL,
-                "conversation_type": "multi_turn" if conversation_history else "single_turn",
-                "num_turns": len(conversation_history) // 2 + 1 if conversation_history else 1,
-                "response_length": len(answer),
-                "num_sources": len(sources),
-                "used_tools": bool(response.choices[0].message.tool_calls)
-            }
-        )
-        
-        return answer, sources
-        
-    except Exception as e:
-        logger.error(f"RAG response generation error: {e}")
-        error_msg = f"I apologize, but I encountered an error while generating a response: {str(e)}"
-        
-        # Log error as child span if parent exists
-        if parent_span:
-            with braintrust_logger.start_span(
-                name="rag_error", 
-                type="error", 
-                parent=parent_span
-            ) as error_span:
-                error_span.log(
-                    metadata={
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                        "model": LLM_MODEL,
-                        "conversation_type": "multi_turn" if conversation_history else "single_turn"
-                    }
-                )
-        
-        return error_msg, []
-
 @app.get("/")
 async def root():
     """Health check endpoint"""
     return {"status": "healthy", "service": "Braintrust RAG API"}
-
-@traced(name="rag_followup", type="followup")
-def process_followup(request: QueryRequest, conversation_id: str):
-    """Process a follow-up message as a child span of the conversation trace"""
-    
-    # Generate RAG response (will be child span due to @traced)
-    answer, sources = generate_rag_response(
-        request.query, 
-        request.conversation_history
-    )
-    
-    # Build updated conversation history
-    updated_history = []
-    if request.conversation_history:
-        updated_history.extend(request.conversation_history)
-    
-    updated_history.extend([
-        Message(role="user", content=request.query),
-        Message(role="assistant", content=answer)
-    ])
-    
-    # Log follow-up metadata
-    current_span().log(
-        inputs={"followup_query": request.query},
-        metadata={
-            "conversation_id": conversation_id,
-            "turn_number": len(request.conversation_history) // 2 + 1,
-            "query_length": len(request.query),
-            "response_length": len(answer),
-            "sources_retrieved": len(sources),
-            "updated_conversation_length": len(updated_history)
-        }
-    )
-    
-    return answer, sources, updated_history
 
 @app.post("/api/search", response_model=QueryResponse)
 async def search(request: QueryRequest):
@@ -356,89 +272,107 @@ async def search(request: QueryRequest):
     try:
         logger.info(f"Processing RAG query: {request.query}")
         import uuid
+        import json
         
         # Determine if this is a new conversation or continuation
         is_new_conversation = not bool(request.conversation_history)
         conversation_id = request.conversation_id or str(uuid.uuid4())
         
         if is_new_conversation:
-            # Create a traced function for the new conversation
-            @traced(name="rag_conversation", type="conversation")
-            def start_conversation():
-                # Log the initial user input
-                current_span().log(
-                    inputs={
-                        "initial_query": request.query,
-                        "top_k": request.top_k
-                    },
-                    metadata={
-                        "conversation_id": conversation_id,
-                        "conversation_type": "new",
-                        "query_length": len(request.query),
-                        "timestamp": __import__('datetime').datetime.now().isoformat()
-                    }
-                )
+            # Start a new conversation trace
+            with braintrust_logger.start_span(
+                name="rag_conversation", 
+                type="conversation",
+                inputs={"query": request.query}
+            ) as conversation_span:
+                # Store the span for follow-ups
+                conversation_root_spans[conversation_id] = conversation_span.export()
                 
-                # Store the conversation trace
-                parent_export = current_span().export()
-                conversation_traces[conversation_id] = parent_export
-                conversation_root_spans[conversation_id] = current_span()
-                
-                # Generate RAG response (will be child span)
-                answer, sources = generate_rag_response(
+                # Process the query
+                answer = await process_conversation_turn(
                     request.query, 
-                    request.conversation_history
+                    [], 
+                    conversation_span.export()
                 )
                 
-                # Build conversation history
-                updated_history = [
-                    Message(role="user", content=request.query),
-                    Message(role="assistant", content=answer)
-                ]
-                
-                # Update the root span with the first output
-                current_span().log(
-                    metadata={
-                        "final_answer": answer,
-                        "conversation_history": [msg.model_dump() for msg in updated_history],
-                        "num_sources": len(sources),
-                        "total_turns": len(updated_history),
-                        "response_length": len(answer),
-                        "sources_retrieved": len(sources)
-                    }
+                # Update the root span with the final output
+                conversation_span.log(
+                    metadata={"answer": answer}
                 )
-                
-                return answer, sources, updated_history
-            
-            # Start the conversation
-            answer, sources, updated_history = start_conversation()
         else:
-            # This is a follow-up - use the stored conversation trace as parent
-            if conversation_id not in conversation_traces:
-                raise HTTPException(status_code=400, detail="Invalid conversation ID")
+            # Continue existing conversation
+            if conversation_id not in conversation_root_spans:
+                raise HTTPException(status_code=400, detail="Conversation not found")
             
-            parent_export = conversation_traces[conversation_id]
+            parent_span = conversation_root_spans[conversation_id]
             
-            # Create traced function with parent
-            process_followup_with_parent = traced(parent=parent_export)(process_followup)
+            # Build conversation history for context
+            conversation_history = []
+            for msg in request.conversation_history:
+                conversation_history.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
             
-            # Process follow-up as child span
-            answer, sources, updated_history = process_followup_with_parent(request, conversation_id)
+            # Process the follow-up query as a child span
+            with braintrust_logger.start_span(
+                name="rag_followup",
+                type="followup", 
+                parent=parent_span,
+                inputs={"query": request.query, "conversation_history": conversation_history}
+            ) as followup_span:
+                answer = await process_conversation_turn(
+                    request.query,
+                    conversation_history, 
+                    followup_span.export()
+                )
+                
+                followup_span.log(metadata={"answer": answer})
+            
+            # Update root span with latest conversation state
+            updated_conversation = conversation_history + [
+                {"role": "user", "content": request.query},
+                {"role": "assistant", "content": answer}
+            ]
             
             # Update the root span with the latest output
-            if conversation_id in conversation_root_spans:
-                root_span = conversation_root_spans[conversation_id]
-                root_span.log(
+            with braintrust_logger.start_span(parent=parent_span) as update_span:
+                update_span.log(
                     metadata={
                         "final_answer": answer,
-                        "conversation_history": [msg.model_dump() for msg in updated_history],
-                        "num_sources": len(sources),
-                        "total_turns": len(updated_history),
-                        "response_length": len(answer),
-                        "sources_retrieved": len(sources),
-                        "last_updated": __import__('datetime').datetime.now().isoformat()
+                        "conversation_history": updated_conversation
                     }
                 )
+        
+        # Get sources for the latest query (outside the trace spans)
+        rag_response = get_documents_handler(request.query)
+        sources = []
+        for doc in rag_response["documents"]:
+            source = Source(
+                title=doc["title"],
+                content=doc["content"],
+                score=doc["score"],
+                section_type=doc.get("section_type", "general"),
+                url=doc.get("url", ""),
+                summary=doc.get("summary"),
+                keywords=doc.get("keywords"),
+                questions=doc.get("questions"),
+                date=doc.get("date")
+            )
+            sources.append(source)
+        
+        # Build updated conversation history
+        if is_new_conversation:
+            updated_history = [
+                Message(role="user", content=request.query),
+                Message(role="assistant", content=answer)
+            ]
+        else:
+            updated_history = list(request.conversation_history)
+            updated_history.extend([
+                Message(role="user", content=request.query),
+                Message(role="assistant", content=answer)
+            ])
         
         logger.info(f"Generated RAG response with {len(sources)} sources")
         
