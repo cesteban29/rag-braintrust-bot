@@ -88,10 +88,16 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Search Section */}
-        <div className="max-w-3xl mx-auto mb-8">
-          <SearchBar onSearch={handleSearch} loading={loading} />
-        </div>
+        {/* Search Section - Only show when no conversation */}
+        {conversationHistory.length === 0 && (
+          <div className="max-w-3xl mx-auto mb-8">
+            <SearchBar 
+              onSearch={handleSearch} 
+              loading={loading} 
+              hasConversation={false}
+            />
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -113,7 +119,13 @@ export default function Home() {
 
         {/* Conversation Display */}
         {conversationHistory.length > 0 && (
-          <ConversationDisplay messages={conversationHistory} loading={loading} />
+          <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-6 mb-8 border border-gray-200">
+            <ConversationDisplay 
+              messages={conversationHistory} 
+              loading={loading} 
+              onFollowUp={handleSearch}
+            />
+          </div>
         )}
 
         {/* Sources */}

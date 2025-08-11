@@ -1,21 +1,45 @@
 'use client';
 
 import { Message } from '@/types';
-import { UserIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { UserIcon, SparklesIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
+import { useState, FormEvent } from 'react';
 
 interface ConversationDisplayProps {
   messages: Message[];
   loading?: boolean;
+  onFollowUp?: (query: string) => void;
 }
 
-export default function ConversationDisplay({ messages, loading = false }: ConversationDisplayProps) {
+export default function ConversationDisplay({ messages, loading = false, onFollowUp }: ConversationDisplayProps) {
+  const [followUpQuery, setFollowUpQuery] = useState('');
+
   if (messages.length === 0 && !loading) {
     return null;
   }
 
+  const handleFollowUpSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (followUpQuery.trim() && onFollowUp) {
+      onFollowUp(followUpQuery.trim());
+      setFollowUpQuery('');
+    }
+  };
+
+  const quickFollowUps = [
+    "Can you explain this in more detail?",
+    "Show me a code example",
+    "What are the best practices?",
+    "How does this compare to alternatives?"
+  ];
+
   return (
     <div className="space-y-6 mb-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">Conversation</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Conversation</h2>
+        <div className="text-sm text-gray-500 mb-4">
+          {Math.floor(messages.length / 2)} exchange{Math.floor(messages.length / 2) !== 1 ? 's' : ''}
+        </div>
+      </div>
       
       <div className="space-y-4">
         {messages.map((message, index) => (
@@ -122,6 +146,58 @@ export default function ConversationDisplay({ messages, loading = false }: Conve
           </div>
         )}
       </div>
+
+      {/* Follow-up Input Bar - Only show after conversation and when not loading */}
+      {messages.length > 0 && !loading && onFollowUp && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex gap-4 items-start">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+              <UserIcon className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <form onSubmit={handleFollowUpSubmit} className="space-y-3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={followUpQuery}
+                    onChange={(e) => setFollowUpQuery(e.target.value)}
+                    placeholder="Ask a follow-up question..."
+                    className="block w-full pl-4 pr-12 py-3 text-sm text-gray-900 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all duration-200"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleFollowUpSubmit(e as any);
+                      }
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!followUpQuery.trim()}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-indigo-500 hover:text-indigo-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <PaperAirplaneIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </form>
+              
+              {/* Quick follow-up suggestions */}
+              <div className="mt-3">
+                <div className="flex flex-wrap gap-2">
+                  {quickFollowUps.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setFollowUpQuery(suggestion)}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

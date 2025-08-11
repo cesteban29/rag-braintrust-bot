@@ -6,19 +6,26 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 interface SearchBarProps {
   onSearch: (query: string) => void;
   loading: boolean;
+  hasConversation?: boolean;
 }
 
-export default function SearchBar({ onSearch, loading }: SearchBarProps) {
+export default function SearchBar({ onSearch, loading, hasConversation }: SearchBarProps) {
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
       onSearch(query.trim());
+      setQuery(''); // Clear the input after sending
     }
   };
 
-  const exampleQueries = [
+  const exampleQueries = hasConversation ? [
+    "Can you explain that in more detail?",
+    "What are the best practices for this?", 
+    "Can you show me a code example?",
+    "How does this compare to other approaches?"
+  ] : [
     "How do I set up API authentication?",
     "What's new in the latest release?",
     "How to use the Python SDK?",
@@ -36,7 +43,7 @@ export default function SearchBar({ onSearch, loading }: SearchBarProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask me anything about Braintrust APIs, SDKs, features..."
+            placeholder={hasConversation ? "Ask a follow-up question..." : "Ask me anything about Braintrust APIs, SDKs, features..."}
             className="block w-full pl-14 pr-36 py-4 text-base text-gray-900 border-2 border-gray-300 rounded-2xl shadow-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all duration-200 placeholder:text-gray-500 placeholder:font-normal font-medium"
             disabled={loading}
           />
@@ -67,7 +74,9 @@ export default function SearchBar({ onSearch, loading }: SearchBarProps) {
 
       {/* Example queries */}
       <div className="mt-8">
-        <p className="text-sm font-medium text-gray-700 mb-4">Popular questions:</p>
+        <p className="text-sm font-medium text-gray-700 mb-4">
+          {hasConversation ? "Continue the conversation:" : "Popular questions:"}
+        </p>
         <div className="flex flex-wrap gap-2">
           {exampleQueries.map((example, index) => (
             <button

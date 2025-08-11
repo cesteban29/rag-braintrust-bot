@@ -15,6 +15,7 @@ from pinecone import Pinecone
 import logging
 import openai
 import json
+from braintrust import traced, wrap_openai, init_logger, current_span
 
 # Load environment variables
 load_dotenv('.env')
@@ -39,12 +40,28 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize Braintrust logger
+braintrust_logger = init_logger(project="rag-braintrust-bot-frontend")
+
+# Validate required environment variables for Braintrust
+required_env_vars = ["BRAINTRUST_API_KEY", "VOYAGEAI_API_KEY", "PINECONE_API_KEY"]
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+if missing_vars:
+    logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
 # Initialize clients (do this once at startup)
 try:
     vo_client = voyageai.Client(api_key=os.getenv("VOYAGEAI_API_KEY"))
     pc_client = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     index = pc_client.Index(os.getenv("INDEX_NAME", "braintrust-llms-txt"))
-    openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    # Use wrapped OpenAI client for Braintrust tracking
+    openai_client = wrap_openai(
+        openai.OpenAI(
+            base_url="https://braintrustproxy.com/v1",
+            api_key=os.getenv('BRAINTRUST_API_KEY')
+        )
+    )
     EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', 'voyage-3')
     LLM_MODEL = os.getenv('LLM_MODEL', 'gpt-4o-mini')
     logger.info("Successfully initialized VoyageAI, Pinecone, and OpenAI clients")
@@ -102,11 +119,41 @@ FORMATTING GUIDELINES:
 
 You have access to retrieved documents that contain relevant information to answer the user's question."""
 
-def generate_rag_response(query: str, conversation_history: List[Message] = None) -> tuple[str, List[Source]]:
+def generate_rag_response(query: str, conversation_history: List[Message] = None, parent_span = None) -> tuple[str, List[Source]]:
     """Generate a RAG response using the existing retrieval tool and LLM."""
     try:
-        # Use the existing retrieval handler
-        rag_response = get_documents_handler(query)
+        # Create a span for document retrieval as child of parent span
+        with braintrust_logger.start_span(
+            name="get_documents", 
+            type="tool", 
+            parent=parent_span
+        ) as retrieval_span:
+            # Use the existing retrieval handler
+            rag_response = get_documents_handler(query)
+            
+            # Prepare retrieved documents for scorers
+            retrieved_documents = []
+            for doc in rag_response["documents"]:
+                retrieved_documents.append({
+                    "id": doc["id"],
+                    "title": doc["title"],
+                    "content": doc["content"],
+                    "score": doc["score"],
+                    "section_type": doc["section_type"],
+                    "url": doc.get("url", ""),
+                    "tags": doc.get("tags", [])
+                })
+            
+            # Log retrieval metadata
+            retrieval_span.log(
+                inputs={"query": query},
+                metadata={
+                    "tool_name": "get_documents",
+                    "document_ids": [doc['id'] for doc in rag_response["documents"]],
+                    "retrieved_documents": retrieved_documents,
+                    "num_documents": len(rag_response["documents"])
+                }
+            )
         
         # Convert to our Source format
         sources = []
@@ -146,20 +193,66 @@ def generate_rag_response(query: str, conversation_history: List[Message] = None
         user_message = f"User Query: {query}\n\n## Retrieved Documentation Context:\n{context}\n\nPlease provide a comprehensive answer based on the retrieved documentation context above."
         messages.append({"role": "user", "content": user_message})
         
-        # Generate response using OpenAI
-        response = openai_client.chat.completions.create(
-            model=LLM_MODEL,
-            messages=messages,
-            max_tokens=1500,
-            temperature=0.1
-        )
+        # Create a span for LLM generation as child of parent span
+        with braintrust_logger.start_span(
+            name="llm_generation", 
+            type="llm", 
+            parent=parent_span
+        ) as llm_span:
+            # Log LLM input
+            llm_span.log(
+                inputs={
+                    "messages": messages,
+                    "model": LLM_MODEL,
+                    "max_tokens": 1500,
+                    "temperature": 0.1
+                }
+            )
+            
+            # Generate response using OpenAI
+            response = openai_client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=messages,
+                max_tokens=1500,
+                temperature=0.1
+            )
+            
+            answer = response.choices[0].message.content or "I apologize, but I couldn't generate a response."
+            
+            # Log metadata (OpenAI wrapper handles input/output logging automatically)
+            llm_span.log(
+                metadata={
+                    "retrieved_documents": retrieved_documents,
+                    "conversation_type": "multi_turn" if conversation_history else "single_turn",
+                    "num_turns": len(conversation_history) // 2 + 1 if conversation_history else 1,
+                    "context_length": len(context),
+                    "response_length": len(answer),
+                    "num_sources": len(sources)
+                }
+            )
         
-        answer = response.choices[0].message.content or "I apologize, but I couldn't generate a response."
         return answer, sources
         
     except Exception as e:
         logger.error(f"RAG response generation error: {e}")
         error_msg = f"I apologize, but I encountered an error while generating a response: {str(e)}"
+        
+        # Log error as child span if parent exists
+        if parent_span:
+            with braintrust_logger.start_span(
+                name="rag_error", 
+                type="error", 
+                parent=parent_span
+            ) as error_span:
+                error_span.log(
+                    metadata={
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                        "model": LLM_MODEL,
+                        "conversation_type": "multi_turn" if conversation_history else "single_turn"
+                    }
+                )
+        
         return error_msg, []
 
 @app.get("/")
@@ -175,19 +268,107 @@ async def search(request: QueryRequest):
     try:
         logger.info(f"Processing RAG query: {request.query}")
         
-        # Generate RAG response using existing tools
-        answer, sources = generate_rag_response(request.query, request.conversation_history)
+        # Determine if this is a new conversation or continuation
+        is_new_conversation = not bool(request.conversation_history)
         
-        # Build updated conversation history
-        updated_history = []
-        if request.conversation_history:
-            updated_history.extend(request.conversation_history)
-        
-        # Add the current exchange
-        updated_history.extend([
-            Message(role="user", content=request.query),
-            Message(role="assistant", content=answer)
-        ])
+        if is_new_conversation:
+            # Start a new trace for the conversation
+            with braintrust_logger.start_span(
+                name="rag_conversation", 
+                type="conversation"
+            ) as conversation_span:
+                # Log the initial user input
+                conversation_span.log(
+                    inputs={
+                        "initial_query": request.query,
+                        "top_k": request.top_k
+                    },
+                    metadata={
+                        "conversation_type": "new",
+                        "query_length": len(request.query),
+                        "timestamp": __import__('datetime').datetime.now().isoformat()
+                    }
+                )
+                
+                # Export parent span for child spans
+                parent_span = conversation_span.export()
+                
+                # Generate RAG response with parent context
+                answer, sources = generate_rag_response(
+                    request.query, 
+                    request.conversation_history,
+                    parent_span
+                )
+                
+                # Build conversation history
+                updated_history = [
+                    Message(role="user", content=request.query),
+                    Message(role="assistant", content=answer)
+                ]
+                
+                # Log the final conversation metadata
+                conversation_span.log(
+                    metadata={
+                        "conversation_complete": True,
+                        "final_answer": answer,
+                        "conversation_history": [msg.model_dump() for msg in updated_history],
+                        "num_sources": len(sources),
+                        "total_turns": len(updated_history),
+                        "response_length": len(answer),
+                        "sources_retrieved": len(sources)
+                    }
+                )
+        else:
+            # This is a follow-up in existing conversation - create a child span
+            with braintrust_logger.start_span(
+                name="rag_followup", 
+                type="followup"
+            ) as followup_span:
+                # Log the follow-up query
+                followup_span.log(
+                    inputs={
+                        "followup_query": request.query,
+                        "conversation_length": len(request.conversation_history)
+                    },
+                    metadata={
+                        "conversation_type": "followup",
+                        "turn_number": len(request.conversation_history) // 2 + 1,
+                        "query_length": len(request.query),
+                        "timestamp": __import__('datetime').datetime.now().isoformat()
+                    }
+                )
+                
+                # Export parent span for child spans
+                parent_span = followup_span.export()
+                
+                # Generate RAG response with parent context
+                answer, sources = generate_rag_response(
+                    request.query, 
+                    request.conversation_history,
+                    parent_span
+                )
+                
+                # Build updated conversation history
+                updated_history = []
+                if request.conversation_history:
+                    updated_history.extend(request.conversation_history)
+                
+                updated_history.extend([
+                    Message(role="user", content=request.query),
+                    Message(role="assistant", content=answer)
+                ])
+                
+                # Log the follow-up response metadata
+                followup_span.log(
+                    metadata={
+                        "response_success": True,
+                        "followup_answer": answer,
+                        "num_sources": len(sources),
+                        "response_length": len(answer),
+                        "sources_retrieved": len(sources),
+                        "updated_conversation_length": len(updated_history)
+                    }
+                )
         
         logger.info(f"Generated RAG response with {len(sources)} sources")
         
@@ -200,6 +381,19 @@ async def search(request: QueryRequest):
         
     except Exception as e:
         logger.error(f"RAG search error: {e}")
+        
+        # Log the error in a separate span
+        with braintrust_logger.start_span(name="api_error", type="error") as error_span:
+            error_span.log(
+                inputs={"query": request.query},
+                metadata={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "response_success": False,
+                    "is_follow_up": bool(request.conversation_history)
+                }
+            )
+        
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/stats")
