@@ -107,12 +107,12 @@ SYSTEM_PROMPT = """You are a helpful assistant specializing in Braintrust docume
 Your role is to provide clear, accurate answers about Braintrust's features, tools, and implementation details.
 
 When answering:
-1. Use the retrieved documentation context to provide accurate answers
-2. Be specific and include code examples when relevant from the documentation
-3. If you're unsure about something, say so rather than making assumptions
-4. Focus on practical implementation details
-5. Structure your responses clearly with proper markdown formatting
-6. If the user asks about something not covered in the retrieved documents, clearly state that
+1. First use the get_documents tool to retrieve relevant documentation
+2. Use the retrieved context to provide accurate answers
+3. Be specific and include code examples when relevant from the documentation
+4. If you're unsure about something, say so rather than making assumptions
+5. Focus on practical implementation details
+6. Structure your responses clearly with proper markdown formatting
 
 FORMATTING GUIDELINES:
 - Use proper markdown headers (# ## ###) instead of single # on empty lines
@@ -120,72 +120,89 @@ FORMATTING GUIDELINES:
 - Use `backticks` for inline code, function names, and technical terms
 - Use **bold** for important concepts and *italics* for emphasis
 - Use bullet points (-) and numbered lists (1.) for step-by-step instructions
-- Include clickable links in [text](url) format when referencing external resources
+- Include clickable links in [text](url) format when referencing external resources"""
 
-You have access to retrieved documents that contain relevant information to answer the user's question."""
+# RAG tool definition for OpenAI function calling
+rag_tool = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_documents",
+            "description": "Retrieve relevant documents from the Braintrust documentation based on a query.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to find relevant documentation"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
+def handle_tool_calls(tool_calls, parent_span) -> Dict[str, Any]:
+    """Handle tool calls from OpenAI and return retrieved documents."""
+    retrieved_documents = []
+    tool_responses = []
+    
+    for tool_call in tool_calls:
+        if tool_call.function.name == "get_documents":
+            # Parse the query from the function arguments
+            import json
+            args = json.loads(tool_call.function.arguments)
+            query = args.get("query", "")
+            
+            # Create a span for document retrieval
+            with braintrust_logger.start_span(
+                name="get_documents", 
+                type="tool", 
+                parent=parent_span
+            ) as span:
+                # Call the RAG tool
+                rag_response = get_documents_handler(query)
+                
+                # Prepare retrieved documents for scorers
+                for doc in rag_response["documents"]:
+                    retrieved_documents.append({
+                        "id": doc["id"],
+                        "title": doc["title"],
+                        "content": doc["content"],
+                        "score": doc["score"],
+                        "section_type": doc["section_type"],
+                        "url": doc.get("url", ""),
+                        "tags": doc.get("tags", [])
+                    })
+                
+                # Log the input query & document ids, plus retrieved_documents for scorers
+                span.log(
+                    inputs={"query": query},
+                    metadata={
+                        "tool_name": "get_documents", 
+                        "document_ids": [doc['id'] for doc in rag_response["documents"]],
+                        "retrieved_documents": retrieved_documents,
+                        "num_documents": len(rag_response["documents"])
+                    }
+                )
+                
+                # Format response for OpenAI
+                tool_responses.append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": "get_documents",
+                    "content": json.dumps(rag_response)
+                })
+    
+    return {
+        "tool_responses": tool_responses,
+        "retrieved_documents": retrieved_documents
+    }
 
 def generate_rag_response(query: str, conversation_history: List[Message] = None, parent_span = None) -> tuple[str, List[Source]]:
-    """Generate a RAG response using the existing retrieval tool and LLM."""
+    """Generate a RAG response using OpenAI function calling."""
     try:
-        # Create a span for document retrieval as child of parent span
-        with braintrust_logger.start_span(
-            name="get_documents", 
-            type="tool", 
-            parent=parent_span
-        ) as retrieval_span:
-            # Use the existing retrieval handler
-            rag_response = get_documents_handler(query)
-            
-            # Prepare retrieved documents for scorers
-            retrieved_documents = []
-            for doc in rag_response["documents"]:
-                retrieved_documents.append({
-                    "id": doc["id"],
-                    "title": doc["title"],
-                    "content": doc["content"],
-                    "score": doc["score"],
-                    "section_type": doc["section_type"],
-                    "url": doc.get("url", ""),
-                    "tags": doc.get("tags", [])
-                })
-            
-            # Log retrieval metadata
-            retrieval_span.log(
-                inputs={"query": query},
-                metadata={
-                    "tool_name": "get_documents",
-                    "document_ids": [doc['id'] for doc in rag_response["documents"]],
-                    "retrieved_documents": retrieved_documents,
-                    "num_documents": len(rag_response["documents"])
-                }
-            )
-        
-        # Convert to our Source format
-        sources = []
-        for doc in rag_response["documents"]:
-            source = Source(
-                title=doc["title"],
-                content=doc["content"],
-                score=doc["score"],
-                section_type=doc["section_type"],
-                url=doc["url"],
-                summary=doc.get("summary"),
-                keywords=doc.get("keywords"), 
-                questions=doc.get("questions"),
-                date=doc.get("date")
-            )
-            sources.append(source)
-        
-        # Prepare context from retrieved documents
-        context_parts = []
-        for i, doc in enumerate(rag_response["documents"], 1):
-            context_part = f"## Document {i}: {doc['title']}\n"
-            context_part += f"**Section:** {doc['section_type']}\n"
-            context_part += f"**Content:** {doc['content']}\n"
-            context_parts.append(context_part)
-        
-        context = "\n---\n".join(context_parts)
-        
         # Build messages for the conversation
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         
@@ -194,47 +211,59 @@ def generate_rag_response(query: str, conversation_history: List[Message] = None
             for msg in conversation_history:
                 messages.append({"role": msg.role, "content": msg.content})
         
-        # Add current query with context
-        user_message = f"User Query: {query}\n\n## Retrieved Documentation Context:\n{context}\n\nPlease provide a comprehensive answer based on the retrieved documentation context above."
-        messages.append({"role": "user", "content": user_message})
+        # Add current user query
+        messages.append({"role": "user", "content": query})
         
-        # Create a span for LLM generation as child of parent span
-        with braintrust_logger.start_span(
-            name="llm_generation", 
-            type="llm", 
-            parent=parent_span
-        ) as llm_span:
-            # Log LLM input
-            llm_span.log(
-                inputs={
-                    "messages": messages,
-                    "model": LLM_MODEL,
-                    "max_tokens": 1500,
-                    "temperature": 0.1
-                }
-            )
+        # Get initial completion with tool calls
+        response = openai_client.chat.completions.create(
+            model=LLM_MODEL,
+            messages=messages,
+            tools=rag_tool,
+            tool_choice="auto",
+            max_tokens=1500,
+            temperature=0.1
+        )
+        
+        # Handle tool calls and get documents
+        retrieved_documents = []
+        sources = []
+        
+        if response.choices[0].message.tool_calls:
+            tool_result = handle_tool_calls(response.choices[0].message.tool_calls, parent_span)
+            retrieved_documents = tool_result.get("retrieved_documents", [])
             
-            # Generate response using OpenAI
-            response = openai_client.chat.completions.create(
+            # Convert retrieved documents to Source format
+            for doc in retrieved_documents:
+                source = Source(
+                    title=doc["title"],
+                    content=doc["content"],
+                    score=doc["score"],
+                    section_type=doc["section_type"],
+                    url=doc.get("url", ""),
+                    summary=doc.get("summary"),
+                    keywords=doc.get("keywords"), 
+                    questions=doc.get("questions"),
+                    date=doc.get("date")
+                )
+                sources.append(source)
+            
+            # Add tool calls and responses to message history
+            messages.append(response.choices[0].message)
+            messages.extend(tool_result["tool_responses"])
+            
+            # Get final response after tool calls
+            final_response = openai_client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=messages,
                 max_tokens=1500,
                 temperature=0.1
             )
-            
-            answer = response.choices[0].message.content or "I apologize, but I couldn't generate a response."
-            
-            # Log metadata (OpenAI wrapper handles input/output logging automatically)
-            llm_span.log(
-                metadata={
-                    "retrieved_documents": retrieved_documents,
-                    "conversation_type": "multi_turn" if conversation_history else "single_turn",
-                    "num_turns": len(conversation_history) // 2 + 1 if conversation_history else 1,
-                    "context_length": len(context),
-                    "response_length": len(answer),
-                    "num_sources": len(sources)
-                }
-            )
+            answer = final_response.choices[0].message.content
+        else:
+            # No tool calls - use the original response
+            answer = response.choices[0].message.content
+        
+        answer = answer or "I apologize, but I couldn't generate a response."
         
         return answer, sources
         
