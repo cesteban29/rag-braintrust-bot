@@ -171,13 +171,10 @@ export default function SearchResults({ query, sources }: SearchResultsProps) {
   }
 
   return (
-    <div className="mt-8">
+    <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Results for "{query}"
-        </h2>
         <span className="text-sm text-gray-500">
-          {sources.length} result{sources.length !== 1 ? 's' : ''} found
+          {sources.length} source{sources.length !== 1 ? 's' : ''} retrieved
         </span>
       </div>
       

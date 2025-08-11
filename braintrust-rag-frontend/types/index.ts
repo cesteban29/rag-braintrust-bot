@@ -10,8 +10,14 @@ export interface Source {
   date?: string;
 }
 
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface QueryResponse {
   query: string;
   sources: Source[];
-  answer?: string;
+  answer: string;
+  conversation_history: Message[];
 }
