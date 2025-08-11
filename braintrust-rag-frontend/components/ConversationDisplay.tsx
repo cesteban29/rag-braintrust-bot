@@ -35,7 +35,7 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
   return (
     <div className="space-y-6 mb-8">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Conversation</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Conversation</h2>
         <div className="text-sm text-gray-500 mb-4">
           {Math.floor(messages.length / 2)} exchange{Math.floor(messages.length / 2) !== 1 ? 's' : ''}
         </div>
@@ -45,20 +45,20 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex gap-4 ${
+            className={`flex gap-3 ${
               message.role === 'user' ? 'flex-row' : 'flex-row'
             }`}
           >
             {/* Avatar */}
-            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+            <div className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center ${
               message.role === 'user' 
-                ? 'bg-blue-100 text-blue-600' 
-                : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+                ? 'bg-gray-100 text-gray-600' 
+                : 'bg-black text-white'
             }`}>
               {message.role === 'user' ? (
-                <UserIcon className="h-5 w-5" />
+                <UserIcon className="h-4 w-4" />
               ) : (
-                <SparklesIcon className="h-5 w-5" />
+                <SparklesIcon className="h-4 w-4" />
               )}
             </div>
 
@@ -66,19 +66,19 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
             <div className={`flex-1 min-w-0 ${
               message.role === 'user' ? 'max-w-3xl' : 'max-w-4xl'
             }`}>
-              <div className={`rounded-2xl px-6 py-4 ${
+              <div className={`rounded-md px-4 py-3 ${
                 message.role === 'user'
-                  ? 'bg-blue-50 border border-blue-200'
-                  : 'bg-white border border-gray-200 shadow-sm'
+                  ? 'bg-gray-50 border border-gray-200'
+                  : 'bg-white border border-gray-200'
               }`}>
-                <div className={`text-sm font-semibold mb-2 ${
-                  message.role === 'user' ? 'text-blue-700' : 'text-gray-700'
+                <div className={`text-xs font-medium mb-2 ${
+                  message.role === 'user' ? 'text-gray-600' : 'text-gray-600'
                 }`}>
-                  {message.role === 'user' ? 'You' : 'Braintrust Assistant'}
+                  {message.role === 'user' ? 'You' : 'Assistant'}
                 </div>
                 <div className={`prose prose-sm max-w-none ${
                   message.role === 'user' 
-                    ? 'text-blue-900' 
+                    ? 'text-gray-800' 
                     : 'text-gray-800'
                 }`}>
                   {message.role === 'assistant' ? (
@@ -124,22 +124,22 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
         
         {/* Loading indicator */}
         {loading && (
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white flex items-center justify-center">
-              <SparklesIcon className="h-5 w-5" />
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-md bg-black text-white flex items-center justify-center">
+              <SparklesIcon className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0 max-w-4xl">
-              <div className="rounded-2xl px-6 py-4 bg-white border border-gray-200 shadow-sm">
-                <div className="text-sm font-semibold mb-2 text-gray-700">
-                  Braintrust Assistant
+              <div className="rounded-md px-4 py-3 bg-white border border-gray-200">
+                <div className="text-xs font-medium mb-2 text-gray-600">
+                  Assistant
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
-                  <span className="text-sm text-gray-500">Generating response...</span>
+                  <span className="text-sm text-gray-500">Thinking...</span>
                 </div>
               </div>
             </div>
@@ -150,9 +150,9 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
       {/* Follow-up Input Bar - Only show after conversation and when not loading */}
       {messages.length > 0 && !loading && onFollowUp && (
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-              <UserIcon className="h-5 w-5" />
+          <div className="flex gap-3 items-start">
+            <div className="flex-shrink-0 w-8 h-8 rounded-md bg-gray-100 text-gray-600 flex items-center justify-center">
+              <UserIcon className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
               <form onSubmit={handleFollowUpSubmit} className="space-y-3">
@@ -162,7 +162,7 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
                     value={followUpQuery}
                     onChange={(e) => setFollowUpQuery(e.target.value)}
                     placeholder="Ask a follow-up question..."
-                    className="block w-full pl-4 pr-12 py-3 text-sm text-gray-900 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all duration-200"
+                    className="block w-full pl-3 pr-10 py-2 text-sm text-gray-900 border border-gray-300 rounded-md focus:ring-1 focus:ring-black focus:border-black bg-white transition-all"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -173,9 +173,9 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
                   <button
                     type="submit"
                     disabled={!followUpQuery.trim()}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-indigo-500 hover:text-indigo-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2 text-gray-400 hover:text-gray-600 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
-                    <PaperAirplaneIcon className="h-5 w-5" />
+                    <PaperAirplaneIcon className="h-4 w-4" />
                   </button>
                 </div>
               </form>
@@ -187,7 +187,7 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
                     <button
                       key={index}
                       onClick={() => setFollowUpQuery(suggestion)}
-                      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-200"
+                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all"
                     >
                       {suggestion}
                     </button>

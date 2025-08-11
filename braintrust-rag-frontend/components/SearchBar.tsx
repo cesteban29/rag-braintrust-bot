@@ -36,34 +36,34 @@ export default function SearchBar({ onSearch, loading, hasConversation }: Search
     <div className="w-full">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-500 group-focus-within:text-indigo-500 transition-colors" />
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+            <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors" />
           </div>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={hasConversation ? "Ask a follow-up question..." : "Ask me anything about Braintrust APIs, SDKs, features..."}
-            className="block w-full pl-14 pr-36 py-4 text-base text-gray-900 border-2 border-gray-300 rounded-2xl shadow-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-all duration-200 placeholder:text-gray-500 placeholder:font-normal font-medium"
+            className="block w-full pl-11 pr-20 py-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:ring-1 focus:ring-black focus:border-black bg-white transition-all placeholder:text-gray-500"
             disabled={loading}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-2">
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="inline-flex items-center px-6 py-2.5 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl disabled:hover:shadow-lg"
+              className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Searching...
+                  Search
                 </>
               ) : (
                 <>
-                  <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+                  <MagnifyingGlassIcon className="h-3 w-3 mr-1" />
                   Search
                 </>
               )}
@@ -73,8 +73,8 @@ export default function SearchBar({ onSearch, loading, hasConversation }: Search
       </form>
 
       {/* Example queries */}
-      <div className="mt-8">
-        <p className="text-sm font-medium text-gray-700 mb-4">
+      <div className="mt-6">
+        <p className="text-sm font-medium text-gray-600 mb-3">
           {hasConversation ? "Continue the conversation:" : "Popular questions:"}
         </p>
         <div className="flex flex-wrap gap-2">
@@ -82,7 +82,7 @@ export default function SearchBar({ onSearch, loading, hasConversation }: Search
             <button
               key={index}
               onClick={() => setQuery(example)}
-              className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md"
+              className="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all"
             >
               {example}
             </button>

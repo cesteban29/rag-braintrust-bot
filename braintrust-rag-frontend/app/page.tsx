@@ -62,28 +62,35 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                Braintrust Docs Assistant
-              </h1>
-              <p className="text-gray-600">
-                AI-powered conversational assistant for Braintrust documentation
-              </p>
+            <div className="flex items-center space-x-4">
+              <div className="w-8 h-8 bg-black rounded-md flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L2 7v10c0 5.55 3.84 10 9 11 1.09.2 2.09.2 3 0 5.16-1 9-5.45 9-11V7l-10-5z"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">
+                  Braintrust Docs Assistant
+                </h1>
+                <p className="text-sm text-gray-500">
+                  AI-powered assistant for documentation
+                </p>
+              </div>
             </div>
             {conversationHistory.length > 0 && (
               <button
                 onClick={clearConversation}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Clear Chat
+                Clear
               </button>
             )}
           </div>
@@ -91,10 +98,10 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Search Section - Only show when no conversation */}
         {conversationHistory.length === 0 && (
-          <div className="max-w-3xl mx-auto mb-8">
+          <div className="max-w-4xl mx-auto mb-8">
             <SearchBar 
               onSearch={handleSearch} 
               loading={loading} 
@@ -105,8 +112,8 @@ export default function Home() {
 
         {/* Error Message */}
         {error && (
-          <div className="max-w-3xl mx-auto mb-8">
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className="bg-red-50 border border-red-200 p-4 rounded-md">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -114,7 +121,7 @@ export default function Home() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-700 font-medium">{error}</p>
+                  <p className="text-sm text-red-800 font-medium">{error}</p>
                 </div>
               </div>
             </div>
@@ -123,7 +130,7 @@ export default function Home() {
 
         {/* Conversation Display */}
         {conversationHistory.length > 0 && (
-          <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-6 mb-8 border border-gray-200">
+          <div className="bg-white border border-gray-200 rounded-md p-6 mb-8">
             <ConversationDisplay 
               messages={conversationHistory} 
               loading={loading} 
@@ -135,20 +142,20 @@ export default function Home() {
         {/* Sources */}
         {sources.length > 0 && !loading && (
           <div className="mt-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Source Documents</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Source Documents</h3>
             <SearchResults query={currentQuery} sources={sources} />
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="max-w-3xl mx-auto text-center py-12">
-            <div className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <div className="max-w-4xl mx-auto text-center py-12">
+            <div className="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-md text-gray-700 bg-gray-50">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Searching through documentation...
+              Searching documentation...
             </div>
           </div>
         )}
@@ -156,14 +163,16 @@ export default function Home() {
         {/* Empty State */}
         {conversationHistory.length === 0 && !loading && (
           <div className="text-center py-16">
-            <div className="max-w-md mx-auto">
-              <svg className="mx-auto h-16 w-16 text-indigo-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-              </svg>
+            <div className="max-w-lg mx-auto">
+              <div className="mx-auto h-12 w-12 bg-gray-50 rounded-md flex items-center justify-center mb-4">
+                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                </svg>
+              </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Start a conversation
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-600 mb-6">
                 Ask me anything about Braintrust APIs, SDKs, features, or documentation. I'll provide detailed answers with relevant source material.
               </p>
             </div>
