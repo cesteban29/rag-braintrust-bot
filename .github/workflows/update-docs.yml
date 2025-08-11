@@ -56,17 +56,33 @@ jobs:
     
     - name: Run Web Document Ingestion
       run: |
-        if [ "${{ github.event.inputs.clear_index }}" = "true" ]; then
-          python -m src.rag_braintrust_bot.ingestion.ingest_web --clear
+        # Use enhanced version if OpenAI key is available, otherwise fallback
+        if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
+          echo "Using enhanced ingestion with LLM enrichment"
+          if [ "${{ github.event.inputs.clear_index }}" = "true" ]; then
+            python -m src.rag_braintrust_bot.ingestion.ingest_web_enhanced --clear
+          else
+            python -m src.rag_braintrust_bot.ingestion.ingest_web_enhanced
+          fi
         else
-          python -m src.rag_braintrust_bot.ingestion.ingest_web
+          echo "Using basic ingestion (no OpenAI key provided)"
+          if [ "${{ github.event.inputs.clear_index }}" = "true" ]; then
+            python -m src.rag_braintrust_bot.ingestion.ingest_web --clear
+          else
+            python -m src.rag_braintrust_bot.ingestion.ingest_web
+          fi
         fi
       env:
         PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
         VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Optional
         INDEX_NAME: ${{ vars.INDEX_NAME }}
         EMBEDDING_MODEL: ${{ vars.EMBEDDING_MODEL || 'voyage-3' }}
-        UPLOAD_BATCH_SIZE: ${{ vars.UPLOAD_BATCH_SIZE || '50' }}
+        ENRICHMENT_MODEL: ${{ vars.ENRICHMENT_MODEL || 'gpt-4o-mini' }}
+        CHUNK_SIZE: ${{ vars.CHUNK_SIZE || '1000' }}
+        CHUNK_OVERLAP: ${{ vars.CHUNK_OVERLAP || '200' }}
+        USE_LLM_ENRICHMENT: ${{ vars.USE_LLM_ENRICHMENT || 'true' }}
+        UPLOAD_BATCH_SIZE: ${{ vars.UPLOAD_BATCH_SIZE || '25' }}
     
     - name: Upload Logs
       if: always()
