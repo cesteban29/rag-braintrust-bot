@@ -20,4 +20,5 @@ export interface QueryResponse {
   sources: Source[];
   answer: string;
   conversation_history: Message[];
+  conversation_id: string;
 }

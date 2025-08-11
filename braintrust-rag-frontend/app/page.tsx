@@ -13,6 +13,7 @@ export default function Home() {
   const [currentQuery, setCurrentQuery] = useState('');
   const [answer, setAnswer] = useState<string>('');
   const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const handleSearch = async (query: string) => {
     setLoading(true);
@@ -28,7 +29,8 @@ export default function Home() {
         body: JSON.stringify({ 
           query, 
           top_k: 5,
-          conversation_history: conversationHistory
+          conversation_history: conversationHistory,
+          conversation_id: conversationId
         }),
       });
 
@@ -40,6 +42,7 @@ export default function Home() {
       setSources(data.sources);
       setAnswer(data.answer);
       setConversationHistory(data.conversation_history);
+      setConversationId(data.conversation_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setSources([]);
@@ -55,6 +58,7 @@ export default function Home() {
     setAnswer('');
     setCurrentQuery('');
     setError(null);
+    setConversationId(null); // Clear the conversation ID to start a new trace
   };
 
   return (
