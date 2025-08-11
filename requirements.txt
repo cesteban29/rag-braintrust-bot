@@ -236,3 +236,5 @@ yarl==1.20.0
     # via aiohttp
 zstandard==0.23.0
     # via langsmith
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
