@@ -20,6 +20,15 @@ export default function Home() {
     setError(null);
     setCurrentQuery(query);
     
+    // Immediately add the user's query to conversation history for initial questions
+    const isNewConversation = conversationHistory.length === 0;
+    if (isNewConversation) {
+      setConversationHistory([{ role: 'user', content: query }]);
+    } else {
+      // For follow-ups, add the user query immediately
+      setConversationHistory(prev => [...prev, { role: 'user', content: query }]);
+    }
+    
     try {
       const response = await fetch('http://localhost:8000/api/search', {
         method: 'POST',
@@ -47,6 +56,12 @@ export default function Home() {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setSources([]);
       setAnswer('');
+      // If there was an error, revert the conversation history
+      if (isNewConversation) {
+        setConversationHistory([]);
+      } else {
+        setConversationHistory(prev => prev.slice(0, -1));
+      }
     } finally {
       setLoading(false);
     }

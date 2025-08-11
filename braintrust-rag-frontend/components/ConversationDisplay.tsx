@@ -85,32 +85,54 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
                     <div 
                       className="prose prose-sm max-w-none leading-relaxed"
                       dangerouslySetInnerHTML={{
-                        __html: message.content
-                          // Handle code blocks first (```language\ncode\n```)
-                          .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 my-4 overflow-x-auto"><code class="font-mono text-sm">$2</code></pre>')
-                          // Handle single backticks after code blocks
-                          .replace(/`([^`\n]+)`/g, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800">$1</code>')
+                        __html: (() => {
+                          let html = message.content;
+                          
+                          // First, protect code blocks by replacing them with placeholders
+                          const codeBlocks: string[] = [];
+                          html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                            const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+                            codeBlocks.push(`<pre class="bg-gray-900 text-gray-100 rounded-lg p-4 my-4 overflow-x-auto"><code class="font-mono text-sm">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`);
+                            return placeholder;
+                          });
+                          
+                          // Handle single backticks
+                          html = html.replace(/`([^`\n]+)`/g, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800">$1</code>');
+                          
                           // Handle headers
-                          .replace(/^### (.*$)/gm, '<h4 class="text-base font-semibold text-gray-900 mt-4 mb-2">$1</h4>')
-                          .replace(/^## (.*$)/gm, '<h3 class="text-lg font-semibold text-gray-900 mt-5 mb-3">$1</h3>')
-                          .replace(/^# (.*$)/gm, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>')
+                          html = html.replace(/^### (.*$)/gm, '<h4 class="text-base font-semibold text-gray-900 mt-4 mb-2">$1</h4>');
+                          html = html.replace(/^## (.*$)/gm, '<h3 class="text-lg font-semibold text-gray-900 mt-5 mb-3">$1</h3>');
+                          html = html.replace(/^# (.*$)/gm, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>');
+                          
                           // Handle bold and italic
-                          .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
-                          .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                          html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
+                          html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+                          
                           // Handle links
-                          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 underline">$1</a>')
-                          // Handle line breaks and paragraphs
-                          .replace(/\n\n/g, '</p><p class="mb-3">')
+                          html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-black hover:text-gray-600 underline">$1</a>');
+                          
                           // Handle bullet points
-                          .replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>')
-                          .replace(/(<li.*<\/li>)/s, '<ul class="list-disc list-inside mb-3 space-y-1">$1</ul>')
+                          html = html.replace(/^- (.*$)/gm, '<li class="ml-4">$1</li>');
+                          html = html.replace(/(<li.*<\/li>)/s, '<ul class="list-disc list-inside mb-3 space-y-1">$1</ul>');
+                          
                           // Handle numbered lists
-                          .replace(/^\d+\. (.*$)/gm, '<li class="ml-4">$1</li>')
-                          .replace(/(<li.*<\/li>)/s, '<ol class="list-decimal list-inside mb-3 space-y-1">$1</ol>')
-                          // Wrap in paragraphs
-                          .replace(/^(?!<[huo]|<pre|<li)(.+$)/gm, '<p class="mb-3">$1</p>')
+                          html = html.replace(/^\d+\. (.*$)/gm, '<li class="ml-4">$1</li>');
+                          html = html.replace(/(<li.*<\/li>)/s, '<ol class="list-decimal list-inside mb-3 space-y-1">$1</ol>');
+                          
+                          // Handle line breaks and paragraphs (but not for placeholders)
+                          html = html.replace(/\n\n/g, '</p><p class="mb-3">');
+                          html = html.replace(/^(?!<[huo]|__CODE_BLOCK_|<li)(.+$)/gm, '<p class="mb-3">$1</p>');
+                          
                           // Clean up empty paragraphs
-                          .replace(/<p[^>]*><\/p>/g, '')
+                          html = html.replace(/<p[^>]*><\/p>/g, '');
+                          
+                          // Restore code blocks
+                          codeBlocks.forEach((codeBlock, index) => {
+                            html = html.replace(`__CODE_BLOCK_${index}__`, codeBlock);
+                          });
+                          
+                          return html;
+                        })()
                       }}
                     />
                   ) : (
