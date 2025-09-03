@@ -32,6 +32,8 @@ project_name = os.getenv('BRAINTRUST_PROJECT_NAME', 'rag-braintrust-bot')
 # List of models to evaluate
 MODELS_TO_EVALUATE = [
     "gpt-4o-mini",
+    "gemini-2.5-flash",
+    "gpt-5-nano"
     # Add more models as needed when they become available
     # "gpt-4o",
     # "claude-3-5-sonnet-20241022",
