@@ -1,17 +1,26 @@
 'use client';
 
 import { Message } from '@/types';
-import { UserIcon, SparklesIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
-import { useState, FormEvent } from 'react';
+import { UserIcon, SparklesIcon, PaperAirplaneIcon, HandThumbUpIcon, HandThumbDownIcon } from '@heroicons/react/24/outline';
+import { HandThumbUpIcon as HandThumbUpIconSolid, HandThumbDownIcon as HandThumbDownIconSolid } from '@heroicons/react/24/solid';
+import React, { useState, FormEvent } from 'react';
 
 interface ConversationDisplayProps {
   messages: Message[];
   loading?: boolean;
   onFollowUp?: (query: string) => void;
+  conversationId?: string;
 }
 
-export default function ConversationDisplay({ messages, loading = false, onFollowUp }: ConversationDisplayProps) {
+export default function ConversationDisplay({ messages, loading = false, onFollowUp, conversationId }: ConversationDisplayProps) {
   const [followUpQuery, setFollowUpQuery] = useState('');
+  const [feedback, setFeedback] = useState<'positive' | 'negative' | null>(null);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+
+  // Reset feedback when conversationId changes
+  React.useEffect(() => {
+    setFeedback(null);
+  }, [conversationId]);
 
   if (messages.length === 0 && !loading) {
     return null;
@@ -22,6 +31,35 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
     if (followUpQuery.trim() && onFollowUp) {
       onFollowUp(followUpQuery.trim());
       setFollowUpQuery('');
+    }
+  };
+
+  const handleFeedback = async (feedbackType: 'positive' | 'negative') => {
+    if (!conversationId || feedbackSubmitting) return;
+    
+    setFeedbackSubmitting(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          feedback: feedbackType
+        }),
+      });
+
+      if (response.ok) {
+        setFeedback(feedbackType);
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to submit feedback:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    } finally {
+      setFeedbackSubmitting(false);
     }
   };
 
@@ -99,10 +137,13 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
                           // Handle single backticks
                           html = html.replace(/`([^`\n]+)`/g, '<code class="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800">$1</code>');
                           
-                          // Handle headers
-                          html = html.replace(/^### (.*$)/gm, '<h4 class="text-base font-semibold text-gray-900 mt-4 mb-2">$1</h4>');
-                          html = html.replace(/^## (.*$)/gm, '<h3 class="text-lg font-semibold text-gray-900 mt-5 mb-3">$1</h3>');
-                          html = html.replace(/^# (.*$)/gm, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>');
+                          // Handle headers (process from most specific to least specific)
+                          html = html.replace(/^###### (.*$)/gm, '<h6 class="text-xs font-medium text-gray-700 mt-2 mb-1">$1</h6>');
+                          html = html.replace(/^##### (.*$)/gm, '<h5 class="text-sm font-medium text-gray-800 mt-3 mb-1">$1</h5>');
+                          html = html.replace(/^#### (.*$)/gm, '<h4 class="text-base font-semibold text-gray-900 mt-4 mb-2">$1</h4>');
+                          html = html.replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold text-gray-900 mt-5 mb-3">$1</h3>');
+                          html = html.replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>');
+                          html = html.replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold text-gray-900 mt-6 mb-4">$1</h1>');
                           
                           // Handle bold and italic
                           html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
@@ -216,6 +257,56 @@ export default function ConversationDisplay({ messages, loading = false, onFollo
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Section - Only show after conversation and when not loading */}
+      {messages.length > 0 && !loading && conversationId && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Was this conversation helpful?
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleFeedback('positive')}
+                disabled={feedbackSubmitting}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  feedback === 'positive'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {feedback === 'positive' ? (
+                  <HandThumbUpIconSolid className="h-4 w-4" />
+                ) : (
+                  <HandThumbUpIcon className="h-4 w-4" />
+                )}
+                <span>Yes</span>
+              </button>
+              <button
+                onClick={() => handleFeedback('negative')}
+                disabled={feedbackSubmitting}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  feedback === 'negative'
+                    ? 'bg-red-50 text-red-700 border border-red-200'
+                    : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {feedback === 'negative' ? (
+                  <HandThumbDownIconSolid className="h-4 w-4" />
+                ) : (
+                  <HandThumbDownIcon className="h-4 w-4" />
+                )}
+                <span>No</span>
+              </button>
+              {feedback && (
+                <span className="text-xs text-gray-500 ml-2">
+                  Thank you for your feedback!
+                </span>
+              )}
             </div>
           </div>
         </div>

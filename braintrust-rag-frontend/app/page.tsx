@@ -150,6 +150,7 @@ export default function Home() {
               messages={conversationHistory} 
               loading={loading} 
               onFollowUp={handleSearch}
+              conversationId={conversationId}
             />
           </div>
         )}

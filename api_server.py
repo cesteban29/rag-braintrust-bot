@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
 import sys
+from datetime import datetime
 from dotenv import load_dotenv
 import voyageai
 from pinecone import Pinecone
@@ -46,6 +47,7 @@ braintrust_logger = init_logger(project="rag-braintrust-bot-frontend")
 # Store conversation trace exports and root spans (in production, use Redis or similar)
 conversation_traces = {}
 conversation_root_spans = {}
+conversation_spans = {}  # Store the actual span objects to keep them open
 
 # System prompt for the assistant
 SYSTEM_PROMPT = """You are a helpful assistant specializing in Braintrust documentation and best practices. 
@@ -97,8 +99,14 @@ def get_model_provider(model_name: str) -> str:
     else:
         return "unknown"
 
-async def process_conversation_turn(query: str, conversation_history: list, parent_span) -> str:
-    """Process a single conversation turn with tool calls, mimicking rag_simulation.py behavior."""
+async def process_conversation_turn(query: str, conversation_history: list, parent_span=None) -> str:
+    """Process a single conversation turn with tool calls, mimicking rag_simulation.py behavior.
+    
+    Args:
+        query: The user's query
+        conversation_history: Previous conversation messages
+        parent_span: Optional parent Braintrust span object for creating child spans
+    """
     try:
         # Get the model for this query
         current_model = get_next_model()
@@ -160,8 +168,13 @@ async def process_conversation_turn(query: str, conversation_history: list, pare
     except Exception as e:
         return f"Error: {str(e)}"
 
-async def handle_tool_calls_async(tool_calls, parent_span) -> dict:
-    """Handle tool calls from OpenAI and return retrieved documents (async version)."""
+async def handle_tool_calls_async(tool_calls, parent_span=None) -> dict:
+    """Handle tool calls from OpenAI and return retrieved documents (async version).
+    
+    Args:
+        tool_calls: Tool calls from OpenAI response
+        parent_span: Optional parent Braintrust span object for creating child spans
+    """
     import json
     
     retrieved_documents = []
@@ -172,8 +185,12 @@ async def handle_tool_calls_async(tool_calls, parent_span) -> dict:
             args = json.loads(tool_call.function.arguments)
             query = args.get("query", "")
             
-            # Create a span for document retrieval
-            with braintrust_logger.start_span(name="get_documents", type="tool", parent=parent_span) as span:
+            # Create a span for document retrieval (only use parent if provided)
+            span_kwargs = {"name": "get_documents", "type": "tool"}
+            if parent_span:
+                span_kwargs["parent"] = parent_span
+            
+            with braintrust_logger.start_span(**span_kwargs) as span:
                 # Call the RAG tool
                 rag_response = get_documents_handler(query)
                 
@@ -259,6 +276,11 @@ class QueryResponse(BaseModel):
     conversation_history: List[Message]
     conversation_id: str  # Return the conversation ID for tracking
 
+class FeedbackRequest(BaseModel):
+    conversation_id: str
+    feedback: str  # 'positive' or 'negative'
+    comment: Optional[str] = None
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
@@ -279,32 +301,35 @@ async def search(request: QueryRequest):
         conversation_id = request.conversation_id or str(uuid.uuid4())
         
         if is_new_conversation:
-            # Start a new conversation trace
-            with braintrust_logger.start_span(
+            # Start a new conversation trace (without 'with' statement to keep it open)
+            conversation_span = braintrust_logger.start_span(
                 name="rag_conversation", 
                 type="conversation",
                 inputs={"query": request.query}
-            ) as conversation_span:
-                # Store the span for follow-ups
-                conversation_root_spans[conversation_id] = conversation_span.export()
-                
-                # Process the query
-                answer = await process_conversation_turn(
-                    request.query, 
-                    [], 
-                    conversation_span.export()
-                )
-                
-                # Update the root span with the final output
-                conversation_span.log(
-                    metadata={"answer": answer}
-                )
+            )
+            
+            # Store both the span object and its export
+            conversation_spans[conversation_id] = conversation_span
+            conversation_root_spans[conversation_id] = conversation_span.export()
+            
+            # Process the query within the conversation span context
+            answer = await process_conversation_turn(
+                request.query, 
+                [], 
+                conversation_span  # Pass the span object
+            )
+            
+            # Update the root span with the final output
+            conversation_span.log(
+                metadata={"answer": answer}
+            )
         else:
             # Continue existing conversation
-            if conversation_id not in conversation_root_spans:
+            if conversation_id not in conversation_spans:
                 raise HTTPException(status_code=400, detail="Conversation not found")
             
-            parent_span = conversation_root_spans[conversation_id]
+            # Get the conversation span to use as parent
+            conversation_span = conversation_spans[conversation_id]
             
             # Build conversation history for context
             conversation_history = []
@@ -318,13 +343,14 @@ async def search(request: QueryRequest):
             with braintrust_logger.start_span(
                 name="rag_followup",
                 type="followup", 
-                parent=parent_span,
+                parent=conversation_span,
                 inputs={"query": request.query, "conversation_history": conversation_history}
             ) as followup_span:
+                # Pass the followup_span for child spans
                 answer = await process_conversation_turn(
                     request.query,
                     conversation_history, 
-                    followup_span.export()
+                    followup_span
                 )
                 
                 followup_span.log(metadata={"answer": answer})
@@ -335,14 +361,13 @@ async def search(request: QueryRequest):
                 {"role": "assistant", "content": answer}
             ]
             
-            # Update the root span with the latest output
-            with braintrust_logger.start_span(parent=parent_span) as update_span:
-                update_span.log(
-                    metadata={
-                        "final_answer": answer,
-                        "conversation_history": updated_conversation
-                    }
-                )
+            # Update the conversation span with latest info
+            conversation_span.log(
+                metadata={
+                    "latest_answer": answer,
+                    "conversation_turn": len(conversation_history) // 2 + 1
+                }
+            )
         
         # Get sources for the latest query (outside the trace spans)
         rag_response = get_documents_handler(request.query)
@@ -401,6 +426,58 @@ async def search(request: QueryRequest):
         
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/feedback")
+async def submit_feedback(feedback_request: FeedbackRequest):
+    """Submit feedback for a conversation"""
+    try:
+        if feedback_request.conversation_id not in conversation_root_spans:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        
+        parent_span_export = conversation_root_spans[feedback_request.conversation_id]
+        
+        # Convert feedback to score (1 for positive, 0 for negative)
+        score = 1.0 if feedback_request.feedback == 'positive' else 0.0
+        
+        # The parent_span_export is a string ID from span.export()
+        # We need to use this ID directly for log_feedback
+        
+        # Log feedback with Braintrust using the logger's log_feedback method
+        # Use keyword arguments as shown in the documentation
+        comment_text = feedback_request.comment if feedback_request.comment else f"User feedback: {feedback_request.feedback}"
+        
+        logger.info(f"Parent span export type: {type(parent_span_export)}, value: {parent_span_export}")
+        
+        # Log feedback - this can be called multiple times if user changes their mind
+        # Braintrust will update the feedback score if called again with the same span ID
+        braintrust_logger.log_feedback(
+            id=parent_span_export,
+            scores={
+                "user_rating": score
+            },
+            comment=comment_text,
+            metadata={
+                "feedback_type": feedback_request.feedback,
+                "conversation_id": feedback_request.conversation_id,
+                "timestamp": str(datetime.now()),
+                "feedback_updated": feedback_request.conversation_id in conversation_traces and conversation_traces.get(feedback_request.conversation_id) is not None
+            }
+        )
+        
+        # Track that feedback was given but don't close the span
+        conversation_traces[feedback_request.conversation_id] = feedback_request.feedback
+        
+        logger.info(f"Feedback submitted for conversation {feedback_request.conversation_id}: {feedback_request.feedback}")
+        
+        return {
+            "status": "feedback_submitted",
+            "conversation_id": feedback_request.conversation_id,
+            "feedback": feedback_request.feedback
+        }
+        
+    except Exception as e:
+        logger.error(f"Feedback submission error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/clear-conversation")
 async def clear_conversation(conversation_id: str = None):
     """Clear a specific conversation from the trace store"""
@@ -410,13 +487,15 @@ async def clear_conversation(conversation_id: str = None):
             del conversation_traces[conversation_id]
             cleared = True
         if conversation_id in conversation_root_spans:
-            # Make sure the span is ended before removing
-            root_span = conversation_root_spans[conversation_id]
+            del conversation_root_spans[conversation_id]
+            cleared = True
+        if conversation_id in conversation_spans:
+            # End the span properly before removing
             try:
-                root_span.end()
+                conversation_spans[conversation_id].end()
             except:
                 pass  # Span might already be ended
-            del conversation_root_spans[conversation_id]
+            del conversation_spans[conversation_id]
             cleared = True
         if cleared:
             return {"status": "conversation cleared", "conversation_id": conversation_id}
