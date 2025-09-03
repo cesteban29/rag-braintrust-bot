@@ -244,7 +244,7 @@ for model_name in MODELS_TO_EVALUATE:
             ],
             metadata={
                 'model': model_name,
-                'dataset': dataset,
+                'dataset': dataset.name,
             },
             experiment_name=f"multiturn_{model_name}_{datetime.datetime.now(pytz.timezone('US/Pacific')).strftime('%Y-%m-%d_%H-%M-%S')}",
         )
