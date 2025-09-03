@@ -193,6 +193,10 @@ for model_name in MODELS_TO_EVALUATE:
                 rag_relevance_llm,
                 rag_completeness_llm,
             ],
+            metadata={
+                'model': model_name,
+                'dataset': dataset,
+            },
             experiment_name=f"basic_{model_name}_{datetime.datetime.now(pytz.timezone('US/Pacific')).strftime('%Y-%m-%d_%H-%M-%S')}",
         )
     except Exception as e:
